@@ -19,6 +19,7 @@
 #include "MinecraftPing.h"
 #include <iostream>
 
+
 char* getDNSresponse(DNS_ERROR z);
 char* getAPIerror(pingError z);
 //translates the error codes into human readable content
@@ -38,7 +39,7 @@ int main(int argc, char* args[]){
 
 
     char* ip = args[1];
-    unsigned short port = stoi(args[2]);
+    unsigned short port = atoi(args[2]);
 
 
     Ping p = Ping(ip, port);
