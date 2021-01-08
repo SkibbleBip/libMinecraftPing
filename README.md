@@ -21,7 +21,12 @@ Link the needed external libraries and create an archive of the dynamic library:
 `g++ -shared -Wl,--out-implib=libMinecraftPing.a -Wl,--dll mcping.o -o libMinecraftPing.dll -s -lwsock32 -liphlpapi` \
 Link the libMinecraftPing.a to the project, and drop the generated libMinecraftPing.dll into the same folder as the project exe. \
 This method does not require linking to any other libraries after a one time link with the SLP API: \
-`g++ project.cpp libMinecraftPing.a` 
+`g++ project.cpp libMinecraftPing.a` \
+If you would rather use a shared object when compiling, you can do: \
+`g++ -fPIC main.cpp -shared -o libMinecraftPing.so -lwsock32 -liphlpapi` \
+Then when compiling your project: \
+`g++ project.cpp libMinecraftPing.so` \
+Ship your executable with `libMinecraftPing.so` in the root directory with the executable.
 
 ## GNU+Linux
 ### Static Linking
