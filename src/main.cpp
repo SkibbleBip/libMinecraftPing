@@ -26,8 +26,7 @@
 
 
 #include "MinecraftPing.h"
-//#include <stdio.h>
-//#include <iostream>
+
 
 extern "C"
 {
