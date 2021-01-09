@@ -43,3 +43,5 @@ To compile a dynamic shared library: \
 Dynamically link on compilation: \
 `g++ project.cpp libMinecraftPing.so` \
 Place `libMinecraftPing.so` in the same folder as the project source when compiling, and then keep the shared library in the executable's root folder.
+# Wiki
+For more information, check the docs in the [Wiki:](https://github.com/SkibbleBip/libMinecraftPing/wiki).
