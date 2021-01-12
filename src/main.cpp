@@ -64,7 +64,8 @@ extern "C"
         else{
             struct hostent* _host;  //struct to contain the host info
 
-            DNS_Response dnsr = SRV_Lookup((char*)frontAddress);
+            DNS_Response dnsr;
+            SRV_Lookup((char*)frontAddress, &dnsr);
             dnsError = dnsr.dns_error;
             //attempt SRV record lookup, set the error code from the record's response
 
@@ -77,9 +78,9 @@ extern "C"
             else if(dnsError == NXDOMAIN_STATUS){
                 _host       = gethostbyname(frontAddress);
                 int x       = strlen(frontAddress);
-                backAddress = (char*)malloc(x*sizeof(char)+1);
-                memcpy(backAddress, frontAddress, x+1);
-                //backAddress = frontAddress;
+                /*backAddress = (char*)malloc(x*sizeof(char)+1);
+                memcpy(backAddress, frontAddress, x+1);*/
+                backAddress = (char*)frontAddress;
                 //SRV record was not found, attempt to check A name through gethostbyname,
                 //assume the backend address is the same as the frontend address
 
@@ -90,7 +91,7 @@ extern "C"
                 free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
-                free(dnsr.url);
+                //free(dnsr.url);
                 //free(backAddress);
                 return -1;
                 /*the SRV record failed to successfully request a lookup, something went wrong
@@ -109,8 +110,8 @@ extern "C"
                     //free(pingResponse);
                     pingResponse = nullptr;
                     milliseconds = -1;
-                    free(dnsr.url);
-                    free(backAddress);
+                    //free(dnsr.url);
+                    //free(backAddress);
                     return 0;
                     /*if _host was nullptr, that's ok, it just means the DNS server could not find the domain, it does not exist*/
                     /*return 0 to let user know the server was not found*/
@@ -142,7 +143,7 @@ extern "C"
         error = SOCKET_OPEN_FAILURE;
         milliseconds = -1;
         free(pingResponse);
-        free(backAddress);
+        //free(backAddress);
         pingResponse = nullptr;
 
         return -1;
@@ -166,7 +167,7 @@ extern "C"
     //if response is negative, then it failed, possibly the server is down, so return 0
 
         error = CONNECT_FAILURE;
-        free(backAddress);
+        //free(backAddress);
         pingResponse = nullptr;
         milliseconds = -1;
         return 0;
@@ -176,7 +177,7 @@ extern "C"
         char handshakePacket[BUFFER_SIZE];
         size_t packetSize = buildHandshake(handshakePacket, backAddress);
         //build the handshake packet
-        free(backAddress);
+        //free(backAddress);
 
 
 
@@ -391,6 +392,19 @@ extern "C"
         dnsError = obj.dnsError;
         milliseconds = obj.milliseconds;
     }
+
+//default constructor
+    Ping::Ping(){
+        port = 0;
+        frontAddress = nullptr;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+        pingResponse = nullptr;
+        error = OK;
+        dnsError = NOERROR_STATUS;
+        milliseconds = 0;
+    }
+
 #ifdef _WIN32
     bool Ping::initializeSocket(){
         //windows network initializer
@@ -489,7 +503,7 @@ bool Ping::checkIfIP(const char* in){
 }
 
 
-DNS_Response Ping::SRV_Lookup(char* url){
+void Ping::SRV_Lookup(char* url, DNS_Response* dnsr){
 
 
     for(unsigned int i = 0; i<16; i++){
@@ -510,8 +524,8 @@ DNS_Response Ping::SRV_Lookup(char* url){
             //milliseconds = -1;
             DNS_Response dnsr;
             dnsr.dns_error = WSA_INITIALIZE_FAILURE;
-            dnsr.url = nullptr;
-            return dnsr;
+            dnsr.url[0] = '\0';
+            return;
             //if failed to initialize the windows socket, then return -1
         }
 #endif // windows requires you to initialize the socket before opening
@@ -616,10 +630,11 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
 
     if(val<0){
             //if sending failed, return an error
-        DNS_Response dnsr;
-        dnsr.dns_error = SEND_REQUEST_FAILURE;
-        dnsr.url       = nullptr;
-        return dnsr;
+        //DNS_Response dnsr;
+        dnsr->dns_error = SEND_REQUEST_FAILURE;
+        dnsr->url[0]       = '\0';
+        return;
+
     }
 
 
@@ -645,11 +660,12 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
 
         if(val<0){
                 //if failed to receive, return an error
-            DNS_Response dnsr;
-            dnsr.dns_error = RECV_REQUEST_FAILURE;
-            dnsr.url       = nullptr;
-            dnsr.port      = 0;
-            return dnsr;
+            //DNS_Response dnsr;
+            dnsr->dns_error = RECV_REQUEST_FAILURE;
+            dnsr->url[0]       = '\0';
+            dnsr->port      = 0;
+            //_dnsr =  &dnsr;
+            return;
         }
 
         _id      = *((unsigned short*)(incoming));
@@ -665,11 +681,12 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
 
     if(_answers < 1){
             //if there were no answers, then return out to let the user know
-        DNS_Response dnsr;
-        dnsr.url        = nullptr;
-        dnsr.dns_error  = (DNS_ERROR)_error;
-        dnsr.port       = 0;
-        return dnsr;
+        //DNS_Response dnsr;
+        dnsr->url[0]        = '\0';
+        dnsr->dns_error  = (DNS_ERROR)_error;
+        dnsr->port       = 0;
+        //_dnsr = &dnsr;
+        return;
     }
 
 
@@ -692,27 +709,32 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
     size = incoming[next_stop];
     unsigned int next_stop2 = 0;
 
-    char* answer = (char*)malloc(0);
-
+    /*char* answer = (char*)malloc(0);*/
+    /*char answer[254];*/
     while(size != 0){
-        answer = (char*)realloc(answer, next_stop2+size+1);
+        /*answer = (char*)realloc(answer, next_stop2+size+1);*/
 
-        memcpy(answer+next_stop2, incoming+next_stop+1, size);
+        memcpy(dnsr->url+next_stop2, incoming+next_stop+1, size);
         next_stop += size+1;
         next_stop2+=size+1;
-        answer[next_stop2-1] = '.';
+        dnsr->url[next_stop2-1] = '.';
 
         size = incoming[next_stop];
     }
-    answer[next_stop2-1] = '\0';
-    DNS_Response dnsr;
-    dnsr.dns_error = (DNS_ERROR)_error;
-    dnsr.url = answer;
-    dnsr.port = _port;
+
+    dnsr->url[next_stop2-1] = '\0';
+    /*char replyTmp[254];*/
+    /*memcpy(replyTmp, answer, next_stop2);*/
+    /*strcpy(replyTmp, answer);*/
+    /*free(answer);*/
+    //DNS_Response dnsr;
+    dnsr->dns_error = (DNS_ERROR)_error;
+    //dnsr->url = answer;
+    dnsr->port = _port;
 #ifdef _WIN32
     WSACleanup();
 #endif
-    return dnsr;
+    //_dnsr = &dnsr;
 
 
 /**                     DNS ANSWER
@@ -735,6 +757,7 @@ Ping::~Ping(){
 
     //exit
 }
+
 
 
 
