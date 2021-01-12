@@ -35,7 +35,6 @@
 #include <cstring>
 #include <stdlib.h>
 #include <sys/time.h>
-//#include <time.h>
 
 #define TIMEOUT 5
 
@@ -88,7 +87,7 @@ enum DNS_ERROR{NOERROR_STATUS = 0, FORMERR_STATUS = 1, SERVFAIL_STATUS = 2, NXDO
             //SRV DNS server response codes, values 10 thru 15 are reserved
 
 struct DNS_Response{
-    char* url;           /*The alias URL of the SRV record*/
+    char url[254];           /*The alias URL of the SRV record. max possible size of a domain url is 253, plus room for terminating null char*/
     DNS_ERROR dns_error; /*DNS error response code*/
     signed short port;   /*redirected port response from the record*/
 
@@ -124,13 +123,13 @@ private:
 public:
     int connectMC();
     Ping( const char* address, int p);
-    Ping(){}
+    Ping();
     ~Ping();
     Ping(const Ping &obj);
     pingError getError(){return error;}
     char* getResponse(){return pingResponse;}
     long getPing(){return milliseconds;}
-    DNS_Response SRV_Lookup(char* url);
+    void SRV_Lookup(char* url, DNS_Response* dnsr);
     DNS_ERROR getDNSerror(){return dnsError;}
 
 
@@ -143,5 +142,3 @@ public:
 
 
 #endif // MINECRAFTPING_H_INCLUDED
-
-
