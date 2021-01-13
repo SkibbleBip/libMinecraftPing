@@ -89,7 +89,7 @@ enum DNS_ERROR{NOERROR_STATUS = 0, FORMERR_STATUS = 1, SERVFAIL_STATUS = 2, NXDO
 struct DNS_Response{
     char url[254];           /*The alias URL of the SRV record. max possible size of a domain url is 253, plus room for terminating null char*/
     DNS_ERROR dns_error; /*DNS error response code*/
-    signed short port;   /*redirected port response from the record*/
+    unsigned short port;   /*redirected port response from the record*/
 
 };
 
@@ -108,7 +108,7 @@ private:
     char* pingResponse;
     const char* frontAddress;
     const char* actualAddress;
-    short port;
+    unsigned short port;
     long milliseconds;
     pingError error;
     DNS_ERROR dnsError;
