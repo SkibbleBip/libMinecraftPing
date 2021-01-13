@@ -54,6 +54,9 @@ int main(int argc, char* args[]){
     }
     else if(x == 0){
         cout<<"The server was not found: " <<endl;
+        DNS_Response d;
+        p.SRV_Lookup(ip, &d);
+        cout<<"\tBackend resolved address: "<<d.url<<endl;
         cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
         cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
         return 0;
@@ -61,9 +64,13 @@ int main(int argc, char* args[]){
     else{
         cout<<p.getResponse()<<endl;
         cout<<"\n\n\tPing: "<<p.getPing()<<" ms."<<endl;
+        DNS_Response d;
+        p.SRV_Lookup(ip, &d);
+        cout<<"\tBackend resolved address: "<<d.url<<endl;
         cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
         cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
     }
+
 
 return 1;
 
