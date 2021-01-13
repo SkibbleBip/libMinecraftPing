@@ -26,7 +26,8 @@
 
 
 #include "MinecraftPing.h"
-
+//#include <stdio.h>
+//#include <iostream>
 
 extern "C"
 {
@@ -35,7 +36,7 @@ extern "C"
         ///returns 0 when the server could not be found (offline, bad url, etc), and negative if there was a network error
         error = OK;
 
-        short _port = this->port;
+        unsigned short _port = this->port;
 
         free(pingResponse);
 
@@ -77,7 +78,7 @@ extern "C"
             }
             else if(dnsError == NXDOMAIN_STATUS){
                 _host       = gethostbyname(frontAddress);
-                int x       = strlen(frontAddress);
+                /*int x       = strlen(frontAddress);*/
                 /*backAddress = (char*)malloc(x*sizeof(char)+1);
                 memcpy(backAddress, frontAddress, x+1);*/
                 backAddress = (char*)frontAddress;
@@ -91,8 +92,6 @@ extern "C"
                 free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
-                //free(dnsr.url);
-                //free(backAddress);
                 return -1;
                 /*the SRV record failed to successfully request a lookup, something went wrong
                 set the error code and return -1 to let user know there was a failure*/
@@ -107,11 +106,8 @@ extern "C"
                 }
                 else{
                     error        = OK;
-                    //free(pingResponse);
                     pingResponse = nullptr;
                     milliseconds = -1;
-                    //free(dnsr.url);
-                    //free(backAddress);
                     return 0;
                     /*if _host was nullptr, that's ok, it just means the DNS server could not find the domain, it does not exist*/
                     /*return 0 to let user know the server was not found*/
@@ -143,7 +139,6 @@ extern "C"
         error = SOCKET_OPEN_FAILURE;
         milliseconds = -1;
         free(pingResponse);
-        //free(backAddress);
         pingResponse = nullptr;
 
         return -1;
@@ -522,9 +517,9 @@ void Ping::SRV_Lookup(char* url, DNS_Response* dnsr){
         //initialize the socket
             error = INITIALIZATION_FAILURE;
             //milliseconds = -1;
-            DNS_Response dnsr;
-            dnsr.dns_error = WSA_INITIALIZE_FAILURE;
-            dnsr.url[0] = '\0';
+            //DNS_Response dnsr;
+            dnsr->dns_error = WSA_INITIALIZE_FAILURE;
+            dnsr->url[0] = '\0';
             return;
             //if failed to initialize the windows socket, then return -1
         }
