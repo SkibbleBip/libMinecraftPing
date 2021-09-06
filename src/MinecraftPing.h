@@ -32,9 +32,13 @@
 #include <resolv.h>
 #endif // __linux__
 
+#ifdef __cplusplus
 #include <cstring>
+#endif
+
 #include <stdlib.h>
 #include <sys/time.h>
+#include <stdint.h>
 
 #define TIMEOUT 5
 
@@ -42,15 +46,11 @@
 #define VERSION -1      /**definitions reserved for later use**/
 #define NEXT_STATE 1
 #define BUFFER_SIZE 1024
+#define DOMAIN_MAX_SIZE 253
 
 #ifndef nullptr
 #define nullptr NULL    /*if nullptr has not been declared by the compiler, then declare it*/
 #endif // nullptr
-
-
-typedef signed int minecraft_socket;
-//just a regular socket, there is already a definition for a socket in a few libraries but for these implimentations I am simlifying it
-
 
 
     enum pingError {OK, SOCKET_INITIALIZATION_FAILURE, SOCKET_OPEN_FAILURE,
@@ -67,9 +67,9 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
 
 
 struct Minecraft_DNS_Question{
-    char* QNAME;
-    char QTYPE[2];
-    char QCLASS[2];
+    uint8_t QNAME[255];
+    uint16_t QTYPE;
+    uint16_t QCLASS;
 
 };
 
@@ -80,58 +80,67 @@ struct Minecraft_DNS_Question{
 **/
 
 
-enum DNS_ERROR{NOERROR_STATUS = 0, FORMERR_STATUS = 1, SERVFAIL_STATUS = 2, NXDOMAIN_STATUS = 3, NOTIMP_STATUS = 4, REFUSED_STATUS = 5,
-                YXDOMAIN_STATUS = 6, XRRSET_STATUS = 7, NOTAUTH_STATUS = 8, NOTZONE_STATUS = 9, SEND_REQUEST_FAILURE = 16,
-                RECV_REQUEST_FAILURE = 17, WSA_INITIALIZE_FAILURE = 18
+enum DNS_ERROR{NOERROR_STATUS = 0, FORMERR_STATUS = 1, SERVFAIL_STATUS = 2,
+                NXDOMAIN_STATUS = 3, NOTIMP_STATUS = 4, REFUSED_STATUS = 5,
+                YXDOMAIN_STATUS = 6, XRRSET_STATUS = 7, NOTAUTH_STATUS = 8,
+                NOTZONE_STATUS = 9, SEND_REQUEST_FAILURE = 16,
+                RECV_REQUEST_FAILURE = 17, WSA_INITIALIZE_FAILURE = 18,
+                INVALID_DOMAIN = 19
 };
             //SRV DNS server response codes, values 10 thru 15 are reserved
 
 struct DNS_Response{
-    char url[254];           /*The alias URL of the SRV record. max possible size of a domain url is 253, plus room for terminating null char*/
-    DNS_ERROR dns_error; /*DNS error response code*/
-    unsigned short port;   /*redirected port response from the record*/
+        char url[254];
+        /*The alias URL of the SRV record. max possible size of a domain
+        *url is 253, plus room for terminating null char
+        */
+        DNS_ERROR dns_error;
+        /*DNS error response code*/
+        uint16_t port;
+        /*redirected port response from the record*/
 
 };
 
+extern "C"{
 
 class Ping{
 
 
 private:
-    const char request[2] = {0x1, 0x0};
-    const unsigned char version[5] = {0xff,0xff,0xff,0xff, 0x0f};// -1 in varInt
-    //constant packet values
+        const char request[2] = {0x1, 0x0};
+        const unsigned char version[5] = {0xff,0xff,0xff,0xff, 0x0f};// -1 in varInt
+        //constant packet values
 
-    minecraft_socket sock;
-    struct sockaddr_in server;
-    struct timeval timeout;
-    char* pingResponse;
-    const char* frontAddress;
-    const char* actualAddress;
-    unsigned short port;
-    long milliseconds;
-    pingError error;
-    DNS_ERROR dnsError;
-    //variables
+        int sock;
+        struct sockaddr_in server;
+        struct timeval timeout;
+        char* pingResponse;
+    /*const*/ char frontAddress[254]; //last char is a null
+    /*const*/ char actualAddress[254]; //last char is a null
+        uint16_t port;
+        long milliseconds;
+        pingError error;
+        DNS_ERROR dnsError;
+        //variables
 
-    bool initializeSocket(void);
-    size_t buildHandshake(char* buffer,   char* host);
-    int readVarInt(minecraft_socket s);
-    bool checkIfIP(const char* in);
+        bool initializeSocket(void);
+        size_t buildHandshake(char* buffer,   char* host);
+        int readVarInt(int s);
+        bool checkIfIP(const char* in);
     //private functions
 
 public:
-    int connectMC();
-    Ping( const char* address, int p);
-    Ping();
-    ~Ping();
-    Ping(const Ping &obj);
-    pingError getError(){return error;}
-    char* getResponse(){return pingResponse;}
-    long getPing(){return milliseconds;}
-    void SRV_Lookup(char* url, DNS_Response* dnsr);
-    DNS_ERROR getDNSerror(){return dnsError;}
-
+        int connectMC();
+        Ping( const char* address, int p);
+        Ping();
+        ~Ping();
+        Ping(const Ping &obj);
+        pingError getError(){return error;}
+        char* getResponse(){return pingResponse;}
+        long getPing(){return milliseconds;}
+        static void SRV_Lookup(char* domain, DNS_Response* dnsr);
+        DNS_ERROR getDNSerror(){return dnsError;}
+        void ping_free();
 
 
 
@@ -139,6 +148,6 @@ public:
 
 };
 
-
+}
 
 #endif // MINECRAFTPING_H_INCLUDED
