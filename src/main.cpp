@@ -33,8 +33,21 @@
 //extern "C"
 //{
 
-
-int Ping::connectMC(){
+/***************************************************************************
+* int Ping::connectMC(void)
+* Author: SkibbleBip
+* Date: Unknowm, 2020   v1 Initial
+* Date: 09/09/2021      v2 Cleaned up, optimized, and added safety checking
+* Description: Function that attempts to initialize a connection to the
+*                       minecraft server and query it's status
+*
+* Parameters:
+*        connectMC      O/P     int     return status, returns 1 if successful,
+*                                                0 if server is offline, or
+*                                                negative if an error occured
+**************************************************************************/
+int Ping::connectMC(void)
+{
         ///attempt to connect to the Minecraft Server. Returns a positive number if successfully communicated with the server,
         ///returns 0 when the server could not be found (offline, bad url, etc), and negative if there was a network error
         error = OK;
@@ -447,6 +460,19 @@ bool Ping::initializeSocket()
 }//end initialize
 #endif // _WIN32
 
+/***************************************************************************
+* size_t Ping::buildHandshake(uint8_t* buffer, char* host)
+* Author: SkibbleBip
+* Date: Unknown, 2020   v1 Initial
+* Date: 09/09/2021      v2 Optimized code to make it faster, added safety
+*                               checking
+* Description: Function that creates the handshake packet
+*
+* Parameters:
+*        buffer I/O     uint8_t*        buffer to contain the packet data
+*        host   I/P     char*   domain of the host being queried
+*        buildHandshake O/P     size_t  size of the packet generated
+**************************************************************************/
 size_t Ping::buildHandshake(uint8_t* buffer, char* host)
 {
         ///inspired by https://github.com/theodik/mcping/blob/master/mcping.c
@@ -609,7 +635,7 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
                                 0x0, 0x0, 0x0, 0x0, 0x0, 0x0
                                 };
 
-        memcpy(mcHeader, (void*)(&time+2), 2);
+        memcpy(mcHeader, (void*)(&time), 2);
 /**                     DNS QUESTION
     QNAME: length octet + that number of octets + null octet. Example: \002my\006server\003org\000 == my.server.org
     QTYPE: 2 octet code, 16 bits, d1 for A record, d5 for CNAME, d33 for SRV Lookup
@@ -681,13 +707,10 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         dest.sin_family=AF_INET;        /*open the socket on the dns port 53*/
         dest.sin_port=htons(53);
 #ifdef _WIN32
-    //FIXED_INFO *pFixedInfo;
         FIXED_INFO pFixedInfo;
-    //pFixedInfo = (FIXED_INFO*)malloc(sizeof(FIXED_INFO));
         unsigned long ulOutBufLen = sizeof(FIXED_INFO);
         GetNetworkParams(&pFixedInfo, &ulOutBufLen);
         dest.sin_addr.s_addr=inet_addr(pFixedInfo.DnsServerList.IpAddress.String);
-    //free(pFixedInfo);
 #endif // _WIN32
 #ifdef __linux__            /**windows' and linux's built in methods for obtaining the DNS server (usually on the router) of the machine**/
         res_init();
@@ -707,7 +730,7 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         }
 
 
-        char incoming[512]; /*Max size of a DNS packet is 512 bytes*/
+        uint8_t incoming[512]; /*Max size of a DNS packet is 512 bytes*/
 #ifdef _WIN32
         int x = sizeof(dest);
 #else
@@ -715,17 +738,17 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         /*windows is stupid for not agreeing with everyone else*/
 #endif
 
-        unsigned short _id;
-        unsigned short _answers;
-        unsigned short _port;
-        unsigned char  _error;
+        uint16_t _id;
+        uint16_t _answers;
+        uint16_t _port;
+        uint8_t  _error;
         //DNS packet answer properties
 
         do
         {
                 val = recvfrom(s, incoming, 512, 0, (sockaddr*)&dest, &x);
     /**         DNS Answer
-    NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits | RDLENGTH: 16 bits
+NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits | RDLENGTH: 16 bits
             RDATA:      depends, look up the format for SRV
     **/
 
@@ -739,13 +762,14 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
                         return;
                 }
 
-                _id      = *((unsigned short*)(incoming));
-                _answers = *((unsigned short*)(incoming+6));
+                _id      = *((uint16_t*)(incoming));
+                _answers = *((uint16_t*)(incoming+6));
                 _answers = htons(_answers);
                 _error   = incoming[3]&0x0f;
                 /*get ID of the packet, error code and the number of answers*/
 
-        }while(_id != *((unsigned short*)mcHeader));
+        //}while(_id != *((uint16_t*)mcHeader));
+        }while(memcmp(&_id, mcHeader, 2));
         /*as the machine may receive multiple DNS packets from various unrelated
         *services, we need to make sure the nabbed dns packet actually belongs
         *to our application. To do this, we compare our sent packet to the
@@ -777,13 +801,13 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         *was successful
         **/
 
-        _port = *((unsigned short*)(incoming+12 + next_stop + 20 + v));
+        _port = *((uint16_t*)(incoming+12 + next_stop + 20 + v));
         _port = ntohs(_port);
         //get the backend port of the server
 
         next_stop = next_stop + 12/*size of header*/ + v/*size of question string*/ + 22 /*location of the answer*/;
         size = incoming[next_stop];
-        unsigned int next_stop2 = 0;
+        uint32_t next_stop2 = 0;
 
 
         while(size != 0){
