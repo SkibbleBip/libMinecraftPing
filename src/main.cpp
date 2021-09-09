@@ -28,6 +28,7 @@
 #include "MinecraftPing.h"
 //#include "MinecraftPing_C.h"
 #include <endian.h>
+#include <stdio.h>
 
 //extern "C"
 //{
@@ -312,21 +313,15 @@ int Ping::connectMC(){
         gettimeofday(&_start, NULL);
         //get start time
 
-        unsigned long start = _start.tv_sec * 1000 + (double)_start.tv_usec * 1.0/(1000.0);
+        uint64_t start = _start.tv_sec * 1000 + (double)_start.tv_usec * 1.0/(1000.0);
         //calculate time in milliseconds (for ping)
 
-
-        char pingPacket[10];
+        uint8_t pingPacket[10];
         pingPacket[0] = 9;//packet length
         pingPacket[1] = 0x1;    //ping ID
-        pingPacket[2] = (start & 0xff00000000000000)>>56;
-        pingPacket[3] = (start & 0xff000000000000)>>48;       /*split a long(8 bytes) up into individual bytes*/
-        pingPacket[4] = (start & 0xff0000000000)>>40;
-        pingPacket[5] = (start & 0xff00000000)>>32;
-        pingPacket[6] = (start & 0xff000000)>>24;
-        pingPacket[7] = (start & 0x00ff0000)>>16;       /*split a long(8 bytes) up into individual bytes*/
-        pingPacket[8] = (start & 0x0000ff00)>>8;
-        pingPacket[9] = (start & 0x000000ff);
+
+        std::memcpy(pingPacket+2, &start, 8);
+
         /*Packet example: [0x9] [0x1] [0x0] [0x1] [0x2] [0x3] [0x4] [0x5] [0x6] [0x7]
                           ^size  ^ID                ^Long Data
 
@@ -340,7 +335,7 @@ int Ping::connectMC(){
 
         }
         else{
-                char pingReply[10];
+                uint8_t pingReply[10];
                 int total = 0;
                 read = 0;
                 do{
@@ -363,23 +358,20 @@ int Ping::connectMC(){
                         milliseconds = -1;
                         }
                         else{
-                                bool isBad = false;
-                                for(int i=0; i<10 && !isBad; i++){
-                                        if(pingPacket[i] != pingReply [i])
-                                                isBad = true;
 
-                                        /*check the incoming packet for any descrepancies in content*/
-                                }
-
-                                if(isBad == true){
-                                        //if it found a descrepancy, throw an ping error, this is a soft error
+                                if(memcmp(pingPacket, pingReply, 10)){
+                                /*check the incoming packet for any
+                                *descrepancies in content. If it found a
+                                *descrepancy, throw an ping error, this is a
+                                *soft error
+                                */
                                         error = PING_FAILURE;
                                         milliseconds = -1;
                                 }
                                 else{
                                         gettimeofday(&_stop, NULL);
                                         //get the stop time
-                                        unsigned long stop = _stop.tv_sec * 1000 + (double)_stop.tv_usec * 1.0/(1000.0);
+                                        uint64_t stop = _stop.tv_sec * 1000 + (double)_stop.tv_usec * 1.0/(1000.0);
                                         milliseconds = stop - start;
                                         //get duration in milliseconds. this is the ping duration
 
