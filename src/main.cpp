@@ -196,11 +196,20 @@ int Ping::connectMC(){
 
         }
 
-        char handshakePacket[BUFFER_SIZE];
+        uint8_t handshakePacket[HANDSHAKE_MAX_SIZE];
         size_t packetSize = buildHandshake(handshakePacket, backAddress);
         //build the handshake packet
-        //free(backAddress);
 
+        if(packetSize < 0){
+        /*if the handshake packet building failed, it's possible a domain
+        *that was too long was given to it, therefor we should error out
+        */
+                error = BAD_DOMAIN;
+                dnsError = INVALID_DOMAIN;
+                pingResponse = nullptr;
+                milliseconds = -1;
+                return 0;
+        }
 
 
         int sendVal = send(sock, handshakePacket, packetSize, 0);
@@ -212,7 +221,7 @@ int Ping::connectMC(){
                 //free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return 0;
+                return -1;
         }
         sendVal = send(sock, request, 2, 0);
         //follow up immediatly with a request packet
@@ -222,7 +231,7 @@ int Ping::connectMC(){
                 //free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return 0;
+                return -1;
         }
 
 
@@ -240,7 +249,7 @@ int Ping::connectMC(){
                 //free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return 0;
+                return -1;
         }
         if(id != 0){
                 //if the ID is not 0, then it is not a regular reply-could be a reject packet or trash
@@ -446,7 +455,7 @@ bool Ping::initializeSocket()
 }//end initialize
 #endif // _WIN32
 
-size_t Ping::buildHandshake(char* buffer,   char* host)
+size_t Ping::buildHandshake(uint8_t* buffer, char* host)
 {
         ///inspired by https://github.com/theodik/mcping/blob/master/mcping.c
 
@@ -456,7 +465,11 @@ size_t Ping::buildHandshake(char* buffer,   char* host)
                             NEXT STATE: VARINT (1)
         **/
 
-        size_t hostLength = strlen(host);
+        size_t hostLength = strnlen(host, DOMAIN_MAX_SIZE+1);
+        if(hostLength > DOMAIN_MAX_SIZE){
+                return -1;
+        }
+
         size_t length = 1 /*packet ID*/ + 5; /*protocol version*/
         length = length + hostLength +1;
         length = length + 2; /*port*/
@@ -559,7 +572,7 @@ void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
         /*chunks of labels*/
         char tmpDomain[DOMAIN_MAX_SIZE+16] = "_minecraft._tcp.";
 
-        if(strnlen(domain, DOMAIN_MAX_SIZE) > DOMAIN_MAX_SIZE -1){
+        if(strnlen(domain, DOMAIN_MAX_SIZE+1) > DOMAIN_MAX_SIZE){
         /*if the domain submitted is too long, then return an error*/
                 dnsr->dns_error = INVALID_DOMAIN;
                 dnsr->url[0] = '\000';

@@ -39,12 +39,14 @@
 #include <sys/time.h>
 #include <stdint.h>
 
+
 #define TIMEOUT 5
 
 #define ID 0x00
 #define VERSION -1      /**definitions reserved for later use**/
 #define NEXT_STATE 1
 #define BUFFER_SIZE 1024
+#define HANDSHAKE_MAX_SIZE 263
 #define DOMAIN_MAX_SIZE 253
 
 #ifndef nullptr
@@ -54,7 +56,8 @@
 
     enum pingError {OK, SOCKET_INITIALIZATION_FAILURE, SOCKET_OPEN_FAILURE,
                     RECEIVE_FAILURE, MALFORMED_VARINT_PACKET, INITIALIZATION_FAILURE,
-                    SEND_FAILURE, CONNECT_FAILURE, PING_FAILURE, SRV_FAILURE
+                    SEND_FAILURE, CONNECT_FAILURE, PING_FAILURE, SRV_FAILURE,
+                    BAD_DOMAIN
                     };
             //ping attempt error codes
 
@@ -107,8 +110,8 @@ class Ping{
 
 
 private:
-        const char request[2] = {0x1, 0x0};
-        const unsigned char version[5] = {0xff,0xff,0xff,0xff, 0x0f};// -1 in varInt
+        const uint8_t request[2] = {0x1, 0x0};
+        const uint8_t version[5] = {0xff,0xff,0xff,0xff, 0x0f};// -1 in varInt
         //constant packet values
 
         int sock;
@@ -124,7 +127,7 @@ private:
         //variables
 
         bool initializeSocket(void);
-        size_t buildHandshake(char* buffer,   char* host);
+        size_t buildHandshake(uint8_t* buffer, char* host);
         int readVarInt(int s);
         bool checkIfIP(const char* in);
         //private functions
@@ -135,11 +138,11 @@ public:
         Ping();
         ~Ping();
         Ping(const Ping &obj);
-        pingError getError();//{return error;}
-        char* getResponse();//{return pingResponse;}
-        long getPing();//{return milliseconds;}
+        pingError getError();
+        char* getResponse();
+        long getPing();
         static void SRV_Lookup(char* domain, DNS_Response* dnsr);
-        DNS_ERROR getDNSerror();//{return dnsError;}
+        DNS_ERROR getDNSerror();
         void ping_free();
 
 
