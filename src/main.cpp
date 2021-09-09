@@ -26,12 +26,11 @@
 
 
 #include "MinecraftPing.h"
-//#include <stdio.h>
-//#include <iostream>
+//#include "MinecraftPing_C.h"
 #include <endian.h>
 
-extern "C"
-{
+//extern "C"
+//{
 
 
 int Ping::connectMC(){
@@ -816,7 +815,7 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
 }
 
 
-Ping::~Ping(){
+Ping::~Ping(void){
 
         free(this->pingResponse);
         //free the response
@@ -824,13 +823,30 @@ Ping::~Ping(){
         //exit
 }
 
-void Ping::ping_free()
+void Ping::ping_free(void)
 {
         free(this->pingResponse);
         this->pingResponse = nullptr;
 }
 
-
-
-
+pingError Ping::getError(void)
+{
+        return this->error;
 }
+
+char* Ping::getResponse(void)
+{
+        return this->pingResponse;
+}
+
+long Ping::getPing(void)
+{
+        return this->milliseconds;
+}
+
+DNS_ERROR Ping::getDNSerror(void)
+{
+        return this->dnsError;
+}
+
+//}//extern C

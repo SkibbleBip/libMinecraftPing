@@ -23,7 +23,6 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <iphlpapi.h>
-//#include <ws2tcpip.h>
 #endif // _WIN32
 #ifdef __linux__
 #include <sys/socket.h>
@@ -90,18 +89,19 @@ enum DNS_ERROR{NOERROR_STATUS = 0, FORMERR_STATUS = 1, SERVFAIL_STATUS = 2,
             //SRV DNS server response codes, values 10 thru 15 are reserved
 
 struct DNS_Response{
-        char url[254];
+        char url[DOMAIN_MAX_SIZE + 1];
         /*The alias URL of the SRV record. max possible size of a domain
         *url is 253, plus room for terminating null char
         */
-        DNS_ERROR dns_error;
+        enum DNS_ERROR dns_error;
         /*DNS error response code*/
         uint16_t port;
         /*redirected port response from the record*/
 
 };
 
-extern "C"{
+
+#ifdef __cplusplus
 
 class Ping{
 
@@ -115,8 +115,8 @@ private:
         struct sockaddr_in server;
         struct timeval timeout;
         char* pingResponse;
-    /*const*/ char frontAddress[254]; //last char is a null
-    /*const*/ char actualAddress[254]; //last char is a null
+    /*const*/ char frontAddress[DOMAIN_MAX_SIZE + 1]; //last char is a null
+    /*const*/ char actualAddress[DOMAIN_MAX_SIZE + 1]; //last char is a null
         uint16_t port;
         long milliseconds;
         pingError error;
@@ -127,7 +127,7 @@ private:
         size_t buildHandshake(char* buffer,   char* host);
         int readVarInt(int s);
         bool checkIfIP(const char* in);
-    //private functions
+        //private functions
 
 public:
         int connectMC();
@@ -135,11 +135,11 @@ public:
         Ping();
         ~Ping();
         Ping(const Ping &obj);
-        pingError getError(){return error;}
-        char* getResponse(){return pingResponse;}
-        long getPing(){return milliseconds;}
+        pingError getError();//{return error;}
+        char* getResponse();//{return pingResponse;}
+        long getPing();//{return milliseconds;}
         static void SRV_Lookup(char* domain, DNS_Response* dnsr);
-        DNS_ERROR getDNSerror(){return dnsError;}
+        DNS_ERROR getDNSerror();//{return dnsError;}
         void ping_free();
 
 
@@ -148,6 +148,49 @@ public:
 
 };
 
+
+
+
+#endif // __cplusplus
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+/*Function definitions for C-type methods. These are used in C programs that
+*have been linked to this C++ library
+*/
+
+        typedef struct Ping Ping;
+
+        Ping* newPing(void);
+
+        Ping* createPing(const char* address, int p);
+
+        Ping* copyPing(const Ping obj);
+
+        void destroyPing(Ping* p);
+
+        int ping_connectMC(Ping* p);
+
+        enum pingError ping_getError(Ping* p);
+
+        char* ping_getResponse(Ping* p);
+
+        long ping_getPing(Ping* p);
+
+        void ping_SRV_Lookup(char* domain, struct DNS_Response* dnsr);
+
+        enum DNS_ERROR ping_getDNSerror(Ping* p);
+
+        void ping_ping_free(Ping* p);
+
+
+
+#ifdef __cplusplus
 }
+#endif // __cplusplus
+
+
 
 #endif // MINECRAFTPING_H_INCLUDED
