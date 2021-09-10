@@ -16,6 +16,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
+/***************************************************************************
+* File:  MinecraftPing.h
+* Author:  SkibbleBip
+* Procedures:
+* class Ping    -The Ping object that contains all the necessary properties of
+*       a Minecraft ServerList Ping Connection
+***************************************************************************/
+
 #ifndef MINECRAFTPING_H_INCLUDED
 #define MINECRAFTPING_H_INCLUDED
 
@@ -46,25 +54,29 @@
 #define VERSION -1      /**definitions reserved for later use**/
 #define NEXT_STATE 1
 #define BUFFER_SIZE 1024
-#define HANDSHAKE_MAX_SIZE 263
+#define HANDSHAKE_MAX_SIZE 264
 #define DOMAIN_MAX_SIZE 253
 
 #ifndef nullptr
-#define nullptr NULL    /*if nullptr has not been declared by the compiler, then declare it*/
+#define nullptr NULL
+/*if nullptr has not been declared by the compiler, then declare it*/
 #endif // nullptr
 
 
     enum pingError {OK, SOCKET_INITIALIZATION_FAILURE, SOCKET_OPEN_FAILURE,
-                    RECEIVE_FAILURE, MALFORMED_VARINT_PACKET, INITIALIZATION_FAILURE,
-                    SEND_FAILURE, CONNECT_FAILURE, PING_FAILURE, SRV_FAILURE,
-                    BAD_DOMAIN
+                    RECEIVE_FAILURE, MALFORMED_VARINT_PACKET,
+                    INITIALIZATION_FAILURE, SEND_FAILURE, CONNECT_FAILURE,
+                    PING_FAILURE, SRV_FAILURE, BAD_DOMAIN
                     };
-            //ping attempt error codes
+            /*ping attempt error codes*/
 
 /**
                     DNS HEADER
-ID: 16 bits | QR: 1 bit | OPCODE: 4 bit | AUTHORITIVE ANSWER: 1 bit | TRUNCATE: 1 bit | RECURSION DESIRED: 1 bit | RECURSION AVAILABLE: 1 bit | Z: 3 bits(000) |
-RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | NAME RESOURCE COUNTS: 16 bits | ADDITIONAL RESOURCE COUNTS: 16 bits
+ID: 16 bits | QR: 1 bit | OPCODE: 4 bit | AUTHORITIVE ANSWER: 1 bit |
+TRUNCATE: 1 bit | RECURSION DESIRED: 1 bit | RECURSION AVAILABLE: 1 bit |
+Z: 3 bits(000) | RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits |
+ANSWER COUNT: 16 bits | NAME RESOURCE COUNTS: 16 bits |
+ADDITIONAL RESOURCE COUNTS: 16 bits
 **/
 
 
@@ -106,6 +118,14 @@ struct DNS_Response{
 
 #ifdef __cplusplus
 
+/***************************************************************************
+* class Ping
+* Author: SkibbleBip
+* Date: 09/10/2021
+* Description: The Ping object that contains all the necessary properties of a
+*       Minecraft ServerList Ping Connection
+*
+**************************************************************************/
 class Ping{
 
 
@@ -134,7 +154,7 @@ private:
 
 public:
         int connectMC();
-        Ping( const char* address, int p);
+        Ping( const char* address, unsigned short p);
         Ping();
         ~Ping();
         Ping(const Ping &obj);

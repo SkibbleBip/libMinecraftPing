@@ -15,9 +15,33 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
-#define _WIN32_WINNT 0x501
+
+/***************************************************************************
+* File:  main.cpp
+* Author:  SkibbleBip
+* Procedures:
+* connectMC     -Attempts to initialize a connection to the minecraft server
+* Ping(X, Y)    -Overloaded constructor
+* Ping(&X)      -Copy constructor
+* Ping()        -Default constructor
+* initializeSocket      -(Windows Only) Sets up the WSA OS features
+* buildHandshake        -Function that creates the handshake packet
+* readVarInt    -Reads in data from a varint from the socket
+* checkIfIP     -Checks an inputted string if it is a domain or IP
+* SRV_Lookup    -Performs an SRV DNS record lookup
+* ~Ping()       -Destructor
+* ping_free     -Frees any dynamic data
+* getError      -returns the ping error code
+* getResponse   -returns the string response of the ping process
+* getPing       -returns the ping latency of the connection
+* getDNSerror   -Returns the DNS error occured while searching for the IP the
+*                       domain points to
+***************************************************************************/
+
+
 
 #ifdef _WIN32
+#define _WIN32_WINNT 0x501
 #define CLOSE(X)            closesocket(X)
 #endif // _WIN32
 #ifdef __linux__
@@ -26,17 +50,14 @@
 
 
 #include "MinecraftPing.h"
-//#include "MinecraftPing_C.h"
 #include <endian.h>
-#include <stdio.h>
 
-//extern "C"
-//{
+
 
 /***************************************************************************
 * int Ping::connectMC(void)
 * Author: SkibbleBip
-* Date: Unknowm, 2020   v1 Initial
+* Date: Unknown, 2020   v1 Initial
 * Date: 09/09/2021      v2 Cleaned up, optimized, and added safety checking
 * Description: Function that attempts to initialize a connection to the
 *                       minecraft server and query it's status
@@ -48,8 +69,11 @@
 **************************************************************************/
 int Ping::connectMC(void)
 {
-        ///attempt to connect to the Minecraft Server. Returns a positive number if successfully communicated with the server,
-        ///returns 0 when the server could not be found (offline, bad url, etc), and negative if there was a network error
+        /*attempt to connect to the Minecraft Server. Returns a positive number
+        *if successfully communicated with the server, returns 0 when the server
+        *could not be found (offline, bad url, etc), and negative if there was
+        *a network error
+        */
         error = OK;
 
         unsigned short _port = this->port;
@@ -151,59 +175,70 @@ int Ping::connectMC(void)
                         */
                 }
 
-            //free(dnsr.url);
+
 
         }
         /*some non-notchian servers (specifically those that are protected by
         * DDOS Protection Services such as Cloudflare or TCPShield)
         * do not allow handshaking from direct IPs, they prefer that they
-        * connect through DNS-recorded domains, henceforth they only allow the URL
-        of the server be included in the handshake, not the IP. This part checks if the inputted Minecraft server location is an IP or URL.
-        This assumes you are aware whether or not the destination accepts IPs or URLs. Attempting to connect from an invalid URL will result
-        in a DNS_FAILURE error and a return 0.*/
+        * connect through DNS-recorded domains, henceforth they only allow the
+        * URL of the server be included in the handshake, not the IP. This part
+        * checks if the inputted Minecraft server location is an IP or URL.
+        * This assumes you are aware whether or not the destination accepts IPs
+        * or URLs. Attempting to connect from an invalid URL will result
+        * in a DNS_FAILURE error and a return 0.
+        */
 
 
         server.sin_family      = AF_INET;
         server.sin_port        = htons(_port);
         server.sin_addr.s_addr =  inet_addr(addressToProcess);
-        //initialize the server connection configuration as an INET /24 IP, and initialize the port.
-        //set the IP address of the server
+        /*initialize the server connection configuration as an INET /24 IP,
+        * and initialize the port.
+        * set the IP address of the server
+        */
 
 
 
         sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        //create the socket as /24 IP, TCP stream
+        /*create the socket as /24 IP, TCP stream*/
 
         if(sock < 0){
-        //if the socket is negative, then it failed, return out
+        /*if the socket is negative, then it failed, return out*/
                 error = SOCKET_OPEN_FAILURE;
                 milliseconds = -1;
                 free(pingResponse);
                 pingResponse = nullptr;
 
                 return -1;
-        }//open the socket
+        }
+        /*open the socket*/
 
 
 
 
 
 #ifdef _WIN32
-        unsigned long mode = 0; /* 0 is blocking, != is non-blocking  */
-        ioctlsocket(sock, FIONBIO, &mode);  /*in *nix, sockets are blocking by default*/
+        unsigned long mode = 0;
+        /* 0 is blocking, != is non-blocking  */
+        ioctlsocket(sock, FIONBIO, &mode);
+        /*in *nix, sockets are blocking by default*/
 #endif // _WIN32
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout));
-        //set socket options as blocking, and set the timeout for the connection
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+        /*set socket options as blocking, set the timeout for the connection*/
 
 
-        int connectR = connect(sock, (struct sockaddr*)&server, sizeof(server));///---------------client-connect
-        //connect to the socket
+        int connectR = connect(sock, (struct sockaddr*)&server, sizeof(server));
+        /*client-connect
+        *connect to the socket
+        */
 
         if(connectR<0){
-        //if response is negative, then it failed, possibly the server is down, so return 0
+        /*if response is negative, then it failed, possibly the
+        * server is down, so return 0
+        */
 
                 error = CONNECT_FAILURE;
-                //free(backAddress);
                 pingResponse = nullptr;
                 milliseconds = -1;
                 return 0;
@@ -212,7 +247,7 @@ int Ping::connectMC(void)
 
         uint8_t handshakePacket[HANDSHAKE_MAX_SIZE];
         size_t packetSize = buildHandshake(handshakePacket, backAddress);
-        //build the handshake packet
+        /*build the handshake packet*/
 
         if(packetSize < 0){
         /*if the handshake packet building failed, it's possible a domain
@@ -227,22 +262,20 @@ int Ping::connectMC(void)
 
 
         int sendVal = send(sock, handshakePacket, packetSize, 0);
-        //send the handshake packet
+        /*send the handshake packet*/
 
         if(sendVal <0){
-        //if send response is negative, then it failed to send
+        /*if send response is negative, then it failed to send*/
                 error = SEND_FAILURE;
-                //free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
                 return -1;
         }
         sendVal = send(sock, request, 2, 0);
-        //follow up immediatly with a request packet
+        /*follow up immediatly with a request packet*/
         if(sendVal <0){
-        //if response negative, then it failed
+        /*if response negative, then it failed*/
                 error = SEND_FAILURE;
-                //free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
                 return -1;
@@ -252,23 +285,25 @@ int Ping::connectMC(void)
 
 
         readVarInt(sock);
-        //eat the first varInt, this variable isnt needed for anything
+        /*eat the first varInt, this variable isnt needed for anything*/
 
         char id;
         int size = recv(sock, &id, 1, 0);
-        //attempt to get the ID of the transmission. Minecraft's packet ID is 0x0
+        /*attempt to get the ID of the transmission.
+        * Minecraft's packet ID is 0x0
+        */
         if(size <= 0){
-                //if reply size is negative, it means it failed
+                /*if reply size is negative, it means it failed*/
                 error = RECEIVE_FAILURE;
-                //free(pingResponse);
                 pingResponse = nullptr;
                 milliseconds = -1;
                 return -1;
         }
         if(id != 0){
-                //if the ID is not 0, then it is not a regular reply-could be a reject packet or trash
+                /*if the ID is not 0, then it is not a regular reply-could
+                * be a reject packet or trash
+                */
                 milliseconds = -1;
-                //free(pingResponse);
                 pingResponse = nullptr;
                 return 0;
         }
@@ -277,13 +312,17 @@ int Ping::connectMC(void)
         int json_length = readVarInt(sock);
         if(json_length < 0){
                 milliseconds = -1;
-                //free(pingResponse);
                 pingResponse = nullptr;
                 return -1;
         }
-            //if the response from readVarInt() is negative, then it failed to read, return -1
-        pingResponse = (char*)malloc(json_length*sizeof(char)+1);           /**pingResponse becomes dynamically allocated**/
-        //memory to hold the ping response, +1 for the null terminator
+        /*if the response from readVarInt() is negative, then it failed to
+        *read, return -1
+        */
+
+
+        pingResponse = (char*)malloc(json_length*sizeof(char)+1);
+        /**pingResponse becomes dynamically allocated**/
+        /*memory to hold the ping response, +1 for the null terminator*/
         char buffer[BUFFER_SIZE];
         int read  = 999;
         int total = json_length;
@@ -291,13 +330,14 @@ int Ping::connectMC(void)
 
         while(json_length >0){
         /*
-                while the receiver still has data in queue, append that value to the pingResponse
-                which is the char pointer to the server's JSON reply. allocate new space into the
-                pingResponse using realloc and the size that was returned in the buffer
+        *while the receiver still has data in queue, append that value to the
+        * pingResponse which is the char pointer to the server's JSON reply.
+        * allocate new space into the pingResponse using realloc and the size
+        * that was returned in the buffer
         */
                 read = recv(sock, buffer, BUFFER_SIZE, 0);
                 if(read <0){
-                        //if recv replies with negative, then it failed
+                        /*if recv replies with negative, then it failed*/
                         error = RECEIVE_FAILURE;
                         free(pingResponse);
                         pingResponse = nullptr;
@@ -307,11 +347,13 @@ int Ping::connectMC(void)
 
 
                 memcpy(pingResponse+s, buffer, read);
-                //add the buffer to the pingResponse
+                /*add the buffer to the pingResponse*/
 
                 s+=read;
                 json_length = json_length - read;
-            //subtract the amount currently processed in the buffer from the total
+            /*subtract the amount currently processed in the buffer
+            *from the total
+            */
         }//end while
         pingResponse[total] = '\0';
 
@@ -319,29 +361,33 @@ int Ping::connectMC(void)
                         ID: 0X1     LONG: 8 BYTES
 
         **/
-        //timing start and stops for calculating the ping duration time
+        /*timing start and stops for calculating the ping duration time*/
         struct timeval _stop, _start;
 
 
         gettimeofday(&_start, NULL);
-        //get start time
+        /*get start time*/
 
         uint64_t start = _start.tv_sec * 1000 + (double)_start.tv_usec * 1.0/(1000.0);
-        //calculate time in milliseconds (for ping)
+        /*calculate time in milliseconds (for ping)*/
 
         uint8_t pingPacket[10];
-        pingPacket[0] = 9;//packet length
-        pingPacket[1] = 0x1;    //ping ID
+        pingPacket[0] = 9;
+        /*packet length*/
+        pingPacket[1] = 0x1;
+        /*ping ID*/
 
         std::memcpy(pingPacket+2, &start, 8);
 
-        /*Packet example: [0x9] [0x1] [0x0] [0x1] [0x2] [0x3] [0x4] [0x5] [0x6] [0x7]
-                          ^size  ^ID                ^Long Data
+/*Packet example: [0x9] [0x1] [0x0] [0x1] [0x2] [0x3] [0x4] [0x5] [0x6] [0x7]
+                    ^size  ^ID                ^Long Data
 
-        this packet contains a random number to use as a checksum when sending and receiving the ping-pong packets*/
+*this packet contains a random number to use as a checksum when sending and
+*receiving the ping-pong packets
+*/
 
         sendVal = send(sock, pingPacket, 10, 0);
-        //send the packet
+        /*send the packet*/
         if(sendVal < 0){
                 error = SEND_FAILURE;
                 milliseconds = -1;
@@ -356,17 +402,23 @@ int Ping::connectMC(void)
                         total +=read;
 
                 }while(total <10);
-                //certain servers transmit packets in chunks, so we must piece them all back together
+                /*certain servers transmit packets in chunks, so we must
+                *piece them all back together
+                */
 
 
                 if(read < 0){
-                        //if read fail, set the error code to RECEIVE_FAILURE, set ping to negative. this is a soft error
+                        /*if read fail, set the error code to RECEIVE_FAILURE,
+                        *set ping to negative. this is a soft error
+                        */
                         error = RECEIVE_FAILURE;
                         milliseconds = -1;
                 }
                 else{
                         if(pingReply[1] != 0x1 || pingReply[0] != 9){
-                        //if the ping ID and size dont match, throw error. this is a soft error
+                        /*if the ping ID and size dont match, throw error.
+                        *this is a soft error
+                        */
                         error = PING_FAILURE;
                         milliseconds = -1;
                         }
@@ -383,10 +435,15 @@ int Ping::connectMC(void)
                                 }
                                 else{
                                         gettimeofday(&_stop, NULL);
-                                        //get the stop time
-                                        uint64_t stop = _stop.tv_sec * 1000 + (double)_stop.tv_usec * 1.0/(1000.0);
+                                        /*get the stop time*/
+                                        uint64_t stop =
+                                                _stop.tv_sec * 1000 +
+                                                (double)_stop.tv_usec *
+                                                1.0/(1000.0);
                                         milliseconds = stop - start;
-                                        //get duration in milliseconds. this is the ping duration
+                                        /*get duration in milliseconds.
+                                        *this is the ping duration
+                                        */
 
                                 }
                         }
@@ -398,17 +455,26 @@ int Ping::connectMC(void)
 #ifdef _WIN32
        WSACleanup();
 #endif // _WIN32
-       //close the socket, terminate connection
+       /*cleanup any windows related stuff*/
 
 
         return 1;
-    //return 1, we successfully connected
-}//end connectMC()
-/**************************CONSTRUCTOR********************************/
-Ping::Ping( const char* address, int p)
+    /*return 1, we successfully connected*/
+}
+
+/***************************************************************************
+* Ping::Ping( const char* address, unsigned short p)
+* Author: SkibbleBip
+* Date: 09/10/2021
+* Description: Overloaded constructor
+*
+* Parameters:
+*        address        I/P     const char*     domain of the minecraft server
+*        p              I/P     unsigned short  port of the minecraft server
+**************************************************************************/
+Ping::Ping( const char* address, unsigned short p)
 {
         port = p;
-        //frontAddress = address;
         strncpy(frontAddress, address, DOMAIN_MAX_SIZE);
         frontAddress[DOMAIN_MAX_SIZE-1] = '\000';
 
@@ -420,10 +486,19 @@ Ping::Ping( const char* address, int p)
         milliseconds = 0;
 
 
-}//end constructor
-/**********************************************************************/
+}
 
-Ping::Ping(const Ping &obj){
+/***************************************************************************
+* Ping::Ping(const Ping &obj)
+* Author: SkibbleBip
+* Date: 09/10/2021
+* Description: Copy constructor
+*
+* Parameters:
+*        obj    I/P     const Ping&     object to copy
+**************************************************************************/
+Ping::Ping(const Ping &obj)
+{
         port = obj.port;
         strncpy(frontAddress, obj.frontAddress, DOMAIN_MAX_SIZE);
         frontAddress[DOMAIN_MAX_SIZE] = '\000';
@@ -434,10 +509,18 @@ Ping::Ping(const Ping &obj){
         milliseconds = obj.milliseconds;
 }
 
-//default constructor
-Ping::Ping(){
+/***************************************************************************
+* Ping::Ping()
+* Author: SkibbleBip
+* Date: 09/10/2021
+* Description: Default constructor
+*
+* Parameters:
+**************************************************************************/
+Ping::Ping()
+{
         port = 0;
-        frontAddress[0] = '\000'; //= nullptr;
+        frontAddress[0] = '\000';
         timeout.tv_sec = 5;
         timeout.tv_usec = 0;
         pingResponse = nullptr;
@@ -447,9 +530,18 @@ Ping::Ping(){
 }
 
 #ifdef _WIN32
-bool Ping::initializeSocket()
+/***************************************************************************
+* bool Ping::initializeSocket(void)
+* Author: SkibbleBip
+* Date: Unknown, 2020
+* Description: (Windows Only) Initializes the WSA socket OS features
+*
+* Parameters:
+*        initializeSocket       O/P     bool    boolean status return value
+**************************************************************************/
+bool Ping::initializeSocket(void)
 {
-        //windows network initializer
+        /*windows network initializer*/
         WSADATA data;
 
         if(!WSAStartup(MAKEWORD(2, 10), &data))
@@ -512,7 +604,17 @@ size_t Ping::buildHandshake(uint8_t* buffer, char* host)
 }
 
 
-
+/***************************************************************************
+* int Ping::readVarInt(int s)
+* Author: SkibbleBip
+* Date: Unknown, 2020
+* Description: Reads from a socket data and processes it to read the variable
+*       integer from the packet
+*
+* Parameters:
+*        s      I/P     int     inputted socket
+*        readVarInt     O/P     int     value of the varint read
+**************************************************************************/
 int Ping::readVarInt(int s)
 {
         char size;
@@ -546,6 +648,16 @@ int Ping::readVarInt(int s)
     /*return the integer value of the varInt*/
 }
 
+/***************************************************************************
+* bool Ping::checkIfIP(const char* in)
+* Author: SkibbleBip
+* Date: Unknown, 2020
+* Description: Checks if a string contains an IP or a domain url
+*
+* Parameters:
+*        in     O/P     const char*     inputted string
+*        checkIfIP      O/P     bool    boolean response
+**************************************************************************/
 bool Ping::checkIfIP(const char* in)
 {
         int c = 0;
@@ -623,8 +735,11 @@ void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
 
 /**
                     DNS HEADER
-ID: 16 bits | QR: 1 bit | OPCODE: 4 bit | AUTHORITIVE ANSWER: 1 bit | TRUNCATE: 1 bit | RECURSION DESIRED: 1 bit | RECURSION AVAILABLE: 1 bit | Z: 3 bits(000) |
-RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | NAME RESOURCE COUNTS: 16 bits | ADDITIONAL RESOURCE COUNTS: 16 bits
+ID: 16 bits | QR: 1 bit | OPCODE: 4 bit | AUTHORITIVE ANSWER: 1 bit |
+TRUNCATE: 1 bit | RECURSION DESIRED: 1 bit | RECURSION AVAILABLE: 1 bit |
+ Z: 3 bits(000) | RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits |
+ANSWER COUNT: 16 bits | NAME RESOURCE COUNTS: 16 bits |
+ADDITIONAL RESOURCE COUNTS: 16 bits
 **/
 /**/
 /**/
@@ -636,9 +751,13 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
                                 };
 
         memcpy(mcHeader, (void*)(&time), 2);
+        /*copy the payload random number to the first 2 bytes*/
+
 /**                     DNS QUESTION
-    QNAME: length octet + that number of octets + null octet. Example: \002my\006server\003org\000 == my.server.org
-    QTYPE: 2 octet code, 16 bits, d1 for A record, d5 for CNAME, d33 for SRV Lookup
+    QNAME: length octet + that number of octets + null octet.
+    Example: \002my\006server\003org\000 == my.server.org
+    QTYPE: 2 octet code, 16 bits, d1 for A record, d5 for CNAME,
+        d33 for SRV Lookup
     QCLASS: 2 octet, 16 bits
 **/
 
@@ -662,9 +781,10 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
                 if(tmpDomain[i] != '.'){
                         label[j] = tmpDomain[i];
                         j++;
-                //add new char to the temp label and increase the temp counter
+                /*add new char to the temp label and increase the temp counter*/
                 }
                 else{
+                /*copy the label to the output domain string*/
 
                         label[j] = '\000';
                         mcQuestion.QNAME[i] = '\000';
@@ -707,22 +827,34 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         dest.sin_family=AF_INET;        /*open the socket on the dns port 53*/
         dest.sin_port=htons(53);
 #ifdef _WIN32
-        FIXED_INFO pFixedInfo;
+        FIXED_INFO pfi;
         unsigned long ulOutBufLen = sizeof(FIXED_INFO);
-        GetNetworkParams(&pFixedInfo, &ulOutBufLen);
-        dest.sin_addr.s_addr=inet_addr(pFixedInfo.DnsServerList.IpAddress.String);
+        GetNetworkParams(&pfi, &ulOutBufLen);
+        dest.sin_addr.s_addr=inet_addr(pfi.DnsServerList.IpAddress.String);
 #endif // _WIN32
-#ifdef __linux__            /**windows' and linux's built in methods for obtaining the DNS server (usually on the router) of the machine**/
+#ifdef __linux__
         res_init();
         dest = _res.nsaddr_list[0];
 #endif // __linux__
-        int val = sendto(s, toSend, sizeof(mcHeader)+z+1, 0, (sockaddr*)&dest, sizeof(dest));
+
+/*perform the lookup of the DNS server on either windows or *nix
+*(usually the router)
+*/
+
+
+
+        int val = sendto(s,
+                        toSend,
+                        sizeof(mcHeader)+z+1,
+                        0,
+                        (sockaddr*)&dest,
+                        sizeof(dest)
+                        );
         /*send the DNS packet to the gateway*/
 
 
         if(val<0){
-            //if sending failed, return an error
-                //DNS_Response dnsr;
+            /*if sending failed, return an error*/
                 dnsr->dns_error = SEND_REQUEST_FAILURE;
                 dnsr->url[0]       = '\0';
                 return;
@@ -730,7 +862,8 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         }
 
 
-        uint8_t incoming[512]; /*Max size of a DNS packet is 512 bytes*/
+        uint8_t incoming[512];
+        /*Max size of a DNS packet is 512 bytes*/
 #ifdef _WIN32
         int x = sizeof(dest);
 #else
@@ -748,17 +881,16 @@ RESPONSE CODE: 4 bits (0-5) | QUESTION COUNT: 16 bits | ANSWER COUNT: 16 bits | 
         {
                 val = recvfrom(s, incoming, 512, 0, (sockaddr*)&dest, &x);
     /**         DNS Answer
-NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits | RDLENGTH: 16 bits
-            RDATA:      depends, look up the format for SRV
+        NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits |
+        RDLENGTH: 16 bits
+        RDATA:      depends, look up the format for SRV
     **/
 
                 if(val<0){
-                        //if failed to receive, return an error
-                        //DNS_Response dnsr;
+                        /*if failed to receive, return an error*/
                         dnsr->dns_error = RECV_REQUEST_FAILURE;
                         dnsr->url[0]       = '\0';
                         dnsr->port      = 0;
-                        //_dnsr =  &dnsr;
                         return;
                 }
 
@@ -768,8 +900,8 @@ NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits | RDLENGTH: 
                 _error   = incoming[3]&0x0f;
                 /*get ID of the packet, error code and the number of answers*/
 
-        //}while(_id != *((uint16_t*)mcHeader));
-        }while(memcmp(&_id, mcHeader, 2));
+        }while(_id != *((uint16_t*)mcHeader));
+        //}while(memcmp(&_id, mcHeader, 2));
         /*as the machine may receive multiple DNS packets from various unrelated
         *services, we need to make sure the nabbed dns packet actually belongs
         *to our application. To do this, we compare our sent packet to the
@@ -795,24 +927,25 @@ NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits | RDLENGTH: 
                 next_stop +=size;
                 size = incoming[next_stop + 12 + v++];
         }
-        //get location of the last part of the srv record query string in the packet
+        /*get location of the last part of the srv record query
+        *string in the packet
+        */
 
-        /**Past this point it is assumed that the packet transmission and receival
-        *was successful
-        **/
+        /*Past this point it is assumed that the packet transmission
+        *and receival was successful
+        */
 
         _port = *((uint16_t*)(incoming+12 + next_stop + 20 + v));
         _port = ntohs(_port);
-        //get the backend port of the server
+        /*get the backend port of the server*/
 
-        next_stop = next_stop + 12/*size of header*/ + v/*size of question string*/ + 22 /*location of the answer*/;
+        next_stop = next_stop + 12/*size of header*/
+        + v/*size of question string*/ + 22 /*location of the answer*/;
         size = incoming[next_stop];
         uint32_t next_stop2 = 0;
 
 
         while(size != 0){
-                /*answer = (char*)realloc(answer, next_stop2+size+1);*/
-
                 memcpy(dnsr->url+next_stop2, incoming+next_stop+1, size);
                 next_stop += size+1;
                 next_stop2+=size+1;
@@ -843,8 +976,16 @@ NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits | RDLENGTH: 
 
 }
 
-
-Ping::~Ping(void){
+/***************************************************************************
+* Ping::~Ping(void)
+* Author: SkibbleBip
+* Date: 09/09/2021
+* Description: Destructor of the Ping class
+*
+* Parameters:
+**************************************************************************/
+Ping::~Ping(void)
+{
 
         free(this->pingResponse);
         //free the response
@@ -852,30 +993,76 @@ Ping::~Ping(void){
         //exit
 }
 
+
+/***************************************************************************
+* void Ping::ping_free(void)
+* Author: SkibbleBip
+* Date: 09/09/2021
+* Description: Frees the dynamic response generated by the class
+*
+* Parameters:
+**************************************************************************/
 void Ping::ping_free(void)
 {
         free(this->pingResponse);
         this->pingResponse = nullptr;
 }
 
+/***************************************************************************
+* pingError Ping::getError(void)
+* Author: SkibbleBip
+* Date: 09/09/2021
+* Description: returns the ping error code
+*
+* Parameters:
+*        getError       O/P     pingError       The returned error code
+**************************************************************************/
 pingError Ping::getError(void)
 {
         return this->error;
 }
 
+/***************************************************************************
+* char* Ping::getResponse(void)
+* Author: SkibbleBip
+* Date: 09/09/2021
+* Description: returns the string response of the ping process
+*
+* Parameters:
+*        getResponse    O/P     char*   The returned string
+**************************************************************************/
 char* Ping::getResponse(void)
 {
         return this->pingResponse;
 }
 
+/***************************************************************************
+* long Ping::getPing(void)
+* Author: SkibbleBip
+* Date: 09/09/2021
+* Description: returns the ping latency of the connection
+*
+* Parameters:
+*        getPing        O/P     long    The returned latency value
+**************************************************************************/
 long Ping::getPing(void)
 {
         return this->milliseconds;
 }
 
+/***************************************************************************
+* DNS_ERROR Ping::getDNSerror(void)
+* Author: SkibbleBip
+* Date: 09/09/2021
+* Description: Returns the DNS error occured while searching for the IP the
+*       domain points to
+*
+* Parameters:
+*        getDNSserver   O/P     DNS_ERROR       Returned DNS error code
+**************************************************************************/
 DNS_ERROR Ping::getDNSerror(void)
 {
         return this->dnsError;
 }
 
-//}//extern C
+

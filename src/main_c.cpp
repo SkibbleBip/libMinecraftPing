@@ -25,10 +25,14 @@
 * destroyPing   -Calls the C++ library destructor
 * ping_connectMC        -Calls the C++ library connection function
 * ping_getError -Calls the C++ library error handle and returns the error code
-* ping_getResponse      -Calls the C++ library response function, returns the string of data returned from the server
-* ping_getPing  -Calls the C++ library latency function and returns the milliseconds for processing
-* ping_SRV_Lookup       -Calls the SRV Lookup function in the C++ library and checks the DNS cache for the domain
-* ping_getDNSerror      -Calls the C++ library DNS error handle and returns the DNS error code
+* ping_getResponse      -Calls the C++ library response function, returns the
+*                               string of data returned from the server
+* ping_getPing  -Calls the C++ library latency function and returns the
+*                               milliseconds for processing
+* ping_SRV_Lookup       -Calls the SRV Lookup function in the C++ library and
+*                               checks the DNS cache for the domain
+* ping_getDNSerror      -Calls the C++ library DNS error handle and returns
+*                               the DNS error code
 * ping_ping_free        -Calls the C++ library data freeing function
 ***************************************************************************/
 
