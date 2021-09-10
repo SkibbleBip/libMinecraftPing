@@ -78,7 +78,8 @@ int Ping::connectMC(void)
 
         unsigned short _port = this->port;
 
-        free(pingResponse);
+        //free(pingResponse);
+        pingResponse = "";
 
 
 
@@ -140,8 +141,9 @@ int Ping::connectMC(void)
                 }
                 else{
                         error        = SRV_FAILURE;
-                        free(pingResponse);
-                        pingResponse = nullptr;
+                        //free(pingResponse);
+                        //pingResponse = nullptr;
+                        pingResponse = "";
                         milliseconds = -1;
                         return -1;
                 /*the SRV record failed to successfully request a lookup,
@@ -165,7 +167,8 @@ int Ping::connectMC(void)
                 }
                 else{
                         error        = OK;
-                        pingResponse = nullptr;
+                        //pingResponse = nullptr;
+                        pingResponse = "";
                         milliseconds = -1;
                         return 0;
                         /*if _host was nullptr, that's ok, it just means
@@ -207,8 +210,9 @@ int Ping::connectMC(void)
         /*if the socket is negative, then it failed, return out*/
                 error = SOCKET_OPEN_FAILURE;
                 milliseconds = -1;
-                free(pingResponse);
-                pingResponse = nullptr;
+                //free(pingResponse);
+                //pingResponse = nullptr;
+                pingResponse = "";
 
                 return -1;
         }
@@ -239,7 +243,8 @@ int Ping::connectMC(void)
         */
 
                 error = CONNECT_FAILURE;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 milliseconds = -1;
                 return 0;
 
@@ -255,7 +260,8 @@ int Ping::connectMC(void)
         */
                 error = BAD_DOMAIN;
                 dnsError = INVALID_DOMAIN;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 milliseconds = -1;
                 return 0;
         }
@@ -267,7 +273,8 @@ int Ping::connectMC(void)
         if(sendVal <0){
         /*if send response is negative, then it failed to send*/
                 error = SEND_FAILURE;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 milliseconds = -1;
                 return -1;
         }
@@ -276,7 +283,8 @@ int Ping::connectMC(void)
         if(sendVal <0){
         /*if response negative, then it failed*/
                 error = SEND_FAILURE;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 milliseconds = -1;
                 return -1;
         }
@@ -295,7 +303,8 @@ int Ping::connectMC(void)
         if(size <= 0){
                 /*if reply size is negative, it means it failed*/
                 error = RECEIVE_FAILURE;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 milliseconds = -1;
                 return -1;
         }
@@ -304,7 +313,8 @@ int Ping::connectMC(void)
                 * be a reject packet or trash
                 */
                 milliseconds = -1;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 return 0;
         }
 
@@ -312,7 +322,8 @@ int Ping::connectMC(void)
         int json_length = readVarInt(sock);
         if(json_length < 0){
                 milliseconds = -1;
-                pingResponse = nullptr;
+                //pingResponse = nullptr;
+                pingResponse = "";
                 return -1;
         }
         /*if the response from readVarInt() is negative, then it failed to
@@ -320,13 +331,13 @@ int Ping::connectMC(void)
         */
 
 
-        pingResponse = (char*)malloc(json_length*sizeof(char)+1);
+        //pingResponse = (char*)malloc(json_length*sizeof(char)+1);
         /**pingResponse becomes dynamically allocated**/
         /*memory to hold the ping response, +1 for the null terminator*/
         char buffer[BUFFER_SIZE];
         int read  = 999;
         int total = json_length;
-        int s = 0;
+        //int s = 0;
 
         while(json_length >0){
         /*
@@ -339,23 +350,26 @@ int Ping::connectMC(void)
                 if(read <0){
                         /*if recv replies with negative, then it failed*/
                         error = RECEIVE_FAILURE;
-                        free(pingResponse);
-                        pingResponse = nullptr;
+                        //free(pingResponse);
+                        //pingResponse = nullptr;
+                        pingResponse = "";
                         milliseconds = -1;
                         return -1;
                 }
 
 
-                memcpy(pingResponse+s, buffer, read);
+                //memcpy(pingResponse+s, buffer, read);
+                pingResponse.append(buffer, read);
+
                 /*add the buffer to the pingResponse*/
 
-                s+=read;
+                //s+=read;
                 json_length = json_length - read;
             /*subtract the amount currently processed in the buffer
             *from the total
             */
         }//end while
-        pingResponse[total] = '\0';
+        //pingResponse[total] = '\0';
 
         /**PING PACKET
                         ID: 0X1     LONG: 8 BYTES
@@ -523,7 +537,8 @@ Ping::Ping()
         frontAddress[0] = '\000';
         timeout.tv_sec = 5;
         timeout.tv_usec = 0;
-        pingResponse = nullptr;
+        //pingResponse = nullptr;
+        pingResponse = "";
         error = OK;
         dnsError = NOERROR_STATUS;
         milliseconds = 0;
@@ -987,7 +1002,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 Ping::~Ping(void)
 {
 
-        free(this->pingResponse);
+        //free(this->pingResponse);
+
         //free the response
 
         //exit
@@ -1002,11 +1018,11 @@ Ping::~Ping(void)
 *
 * Parameters:
 **************************************************************************/
-void Ping::ping_free(void)
+/*void Ping::ping_free(void)
 {
         free(this->pingResponse);
         this->pingResponse = nullptr;
-}
+}*/
 
 /***************************************************************************
 * pingError Ping::getError(void)
@@ -1023,15 +1039,15 @@ pingError Ping::getError(void)
 }
 
 /***************************************************************************
-* char* Ping::getResponse(void)
+* std::string Ping::getResponse(void)
 * Author: SkibbleBip
 * Date: 09/09/2021
 * Description: returns the string response of the ping process
 *
 * Parameters:
-*        getResponse    O/P     char*   The returned string
+*        getResponse    O/P     std::string   The returned string
 **************************************************************************/
-char* Ping::getResponse(void)
+/*char**/std::string Ping::getResponse(void)
 {
         return this->pingResponse;
 }

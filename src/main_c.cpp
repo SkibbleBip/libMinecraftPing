@@ -76,9 +76,9 @@ extern "C" {
                 return p->getError();
         }
 
-        char* ping_getResponse(Ping* p)
+        const char* ping_getResponse(Ping* p)
         {
-                return p->getResponse();
+                return p->getResponse().c_str();
         }
 
         long ping_getPing(Ping* p)
@@ -96,10 +96,10 @@ extern "C" {
                 return p->getDNSerror();
         }
 
-        void ping_ping_free(Ping* p)
+        /*void ping_ping_free(Ping* p)
         {
                 p->ping_free();
-        }
+        }*/
 
 
 

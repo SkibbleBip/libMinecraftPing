@@ -41,11 +41,13 @@
 
 #ifdef __cplusplus
 #include <cstring>
+#include <string>
 #endif
 
 #include <stdlib.h>
 #include <sys/time.h>
 #include <stdint.h>
+
 
 
 #define TIMEOUT 5
@@ -137,7 +139,7 @@ private:
         int sock;
         struct sockaddr_in server;
         struct timeval timeout;
-        char* pingResponse;
+        std::string pingResponse;
     /*const*/ char frontAddress[DOMAIN_MAX_SIZE + 1]; //last char is a null
     /*const*/ char actualAddress[DOMAIN_MAX_SIZE + 1]; //last char is a null
         uint16_t port;
@@ -159,11 +161,11 @@ public:
         ~Ping();
         Ping(const Ping &obj);
         pingError getError();
-        char* getResponse();
+        /*char**/std::string getResponse();
         long getPing();
         static void SRV_Lookup(char* domain, DNS_Response* dnsr);
         DNS_ERROR getDNSerror();
-        void ping_free();
+        //void ping_free();
 
 
 
@@ -198,7 +200,7 @@ extern "C" {
 
         enum pingError ping_getError(Ping* p);
 
-        char* ping_getResponse(Ping* p);
+        const char* ping_getResponse(Ping* p);
 
         long ping_getPing(Ping* p);
 
@@ -206,7 +208,7 @@ extern "C" {
 
         enum DNS_ERROR ping_getDNSerror(Ping* p);
 
-        void ping_ping_free(Ping* p);
+        //void ping_ping_free(Ping* p);
 
 
 
