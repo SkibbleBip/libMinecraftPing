@@ -41,38 +41,43 @@ int main(int argc, char* args[]){
     char* ip = args[1];
     unsigned short port = atoi(args[2]);
 
+    Ping ping = Ping(ip, port);
+    Ping pingCopy = ping;
+    Ping arr[] = {ping, pingCopy};
 
-    Ping p = Ping(ip, port);
+    for(int idx = 0; idx < 2; idx++){
+        Ping p = arr[idx];
 
-    int x = p.connectMC();
+        int x = p.connectMC();
 
-    if(x <0){
-        cout<<"There was an error attempting to communicate with the Minecraft server: "<<p.getError()<<endl;
-        cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
-        cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
-        return -1;
+        if(x <0){
+            cout<<"There was an error attempting to communicate with the Minecraft server: "<<p.getError()<<endl;
+            cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
+            cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
+            return -1;
+        }
+        else if(x == 0){
+            cout<<"The server was not found: " <<endl;
+            DNS_Response d;
+            p.SRV_Lookup(ip, &d);
+            cout<<"\tBackend resolved address: "<<d.url<<endl;
+            cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
+            cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
+            return 1;
+        }
+        else{
+            cout<<p.getResponse()<<endl;
+            cout<<"\n\n\tPing: "<<p.getPing()<<" ms."<<endl;
+            DNS_Response d;
+            p.SRV_Lookup(ip, &d);
+            cout<<"\tBackend resolved address: "<<d.url<<endl;
+            cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
+            cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
+        }
+
     }
-    else if(x == 0){
-        cout<<"The server was not found: " <<endl;
-        DNS_Response d;
-        p.SRV_Lookup(ip, &d);
-        cout<<"\tBackend resolved address: "<<d.url<<endl;
-        cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
-        cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
-        return 0;
-    }
-    else{
-        cout<<p.getResponse()<<endl;
-        cout<<"\n\n\tPing: "<<p.getPing()<<" ms."<<endl;
-        DNS_Response d;
-        p.SRV_Lookup(ip, &d);
-        cout<<"\tBackend resolved address: "<<d.url<<endl;
-        cout<<"\tDNS Error Response: "<< getDNSresponse(p.getDNSerror())<<endl;
-        cout<<"\tMinecraft Error Code: "<< getAPIerror(p.getError())<<endl;
-    }
 
-
-return 1;
+return 0;
 
 }
 

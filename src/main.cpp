@@ -76,7 +76,7 @@ int Ping::connectMC(void)
         */
         error = OK;
 
-        unsigned short _port = this->port;
+        uint16_t _port = this->port;
 
         free(pingResponse);
 
@@ -470,9 +470,9 @@ int Ping::connectMC(void)
 *
 * Parameters:
 *        address        I/P     const char*     domain of the minecraft server
-*        p              I/P     unsigned short  port of the minecraft server
+*        p              I/P     uint16_t        port of the minecraft server
 **************************************************************************/
-Ping::Ping( const char* address, unsigned short p)
+Ping::Ping( const char* address, uint16_t p)
 {
         port = p;
         strncpy(frontAddress, address, DOMAIN_MAX_SIZE);

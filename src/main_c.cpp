@@ -51,14 +51,14 @@ extern "C" {
                 return new Ping();
         }
 
-        Ping* createPing(const char* address, int p)
+        Ping* createPing(const char* address, uint16_t p)
         {
                 return new Ping(address, p);
         }
 
-        Ping* copyPing(const Ping obj)
+        Ping* copyPing(const Ping *obj)
         {
-                return new Ping(obj);
+                return new Ping(*obj);
         }
 
         void destroyPing(Ping* p)
