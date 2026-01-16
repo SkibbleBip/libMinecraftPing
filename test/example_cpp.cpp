@@ -105,15 +105,20 @@ char* getDNSresponse(DNS_ERROR z){
 char* getAPIerror(pingError z){
     switch(z){
         case OK:                                return (char*)"OK";
+        case REDIRECTED:                        return (char*)"REDIRECTED";
+        case CONNECT_FAILURE:                   return (char*)"CONNECT_FAILURE";
+
         case SOCKET_INITIALIZATION_FAILURE:     return (char*)"SOCKET_INITIALIZATION_FAILURE";
         case SOCKET_OPEN_FAILURE:               return (char*)"SOCKET_OPEN_FAILURE";
         case RECEIVE_FAILURE:                   return (char*)"RECEIVE_FAILURE";
         case MALFORMED_VARINT_PACKET:           return (char*)"MALFORMED_VARINT_PACKET";
         case INITIALIZATION_FAILURE:            return (char*)"INITIALIZATION_FAILURE";
         case SEND_FAILURE:                      return (char*)"SEND_FAILURE";
-        case CONNECT_FAILURE:                   return (char*)"SEND_FAILURE";
         case PING_FAILURE:                      return (char*)"PING_FAILURE";
         case SRV_FAILURE:                       return (char*)"SRV_FAILURE";
+        case BAD_DOMAIN:                        return (char*)"BAD_DOMAIN";
+        case NO_DOMAIN:                         return (char*)"NO_DOMAIN";
+        case BAD_RESPONSE:                      return (char*)"BAD_RESPONSE";
         default:                                return (char*)"N/A";
 
     }
