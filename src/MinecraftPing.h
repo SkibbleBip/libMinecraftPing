@@ -63,10 +63,21 @@
 #endif // nullptr
 
 
-    enum pingError {OK, SOCKET_INITIALIZATION_FAILURE, SOCKET_OPEN_FAILURE,
-                    RECEIVE_FAILURE, MALFORMED_VARINT_PACKET,
-                    INITIALIZATION_FAILURE, SEND_FAILURE, CONNECT_FAILURE,
-                    PING_FAILURE, SRV_FAILURE, BAD_DOMAIN
+    enum pingError {SOCKET_INITIALIZATION_FAILURE = -11,
+                    SOCKET_OPEN_FAILURE = -10,
+                    RECEIVE_FAILURE = -9,
+                    MALFORMED_VARINT_PACKET = -8,
+                    INITIALIZATION_FAILURE = -7,
+                    SEND_FAILURE = -6,
+                    PING_FAILURE = -5,
+                    SRV_FAILURE = -4,
+                    BAD_DOMAIN = -3,
+                    NO_DOMAIN = -2,
+                    BAD_RESPONSE = -1,
+
+                    CONNECT_FAILURE = 0,
+                    OK = 1,
+                    REDIRECTED = 2,
                     };
             /*ping attempt error codes*/
 
