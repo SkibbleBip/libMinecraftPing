@@ -81,6 +81,7 @@ int Ping::connectMC(void)
         DNS_Response dnsr;
 
         free(pingResponse);
+        pingResponse = nullptr;
 
 
 
@@ -487,7 +488,7 @@ Ping::Ping( const char* address, uint16_t p)
 
         timeout.tv_sec = 5;
         timeout.tv_usec = 0;
-        //pingResponse = (char*)malloc(0);
+        pingResponse = nullptr;
         error = OK;
         dnsError = NOERROR_STATUS;
         milliseconds = 0;
@@ -701,7 +702,7 @@ bool Ping::checkIfIP(const char* in)
 *        dnsr   I/O     DNS_Response*   DNS data response struct that holds
 *                                               any error codes, responses, etc
 **************************************************************************/
-void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
+void Ping::SRV_Lookup(const char* domain, DNS_Response* dnsr)
 {
         struct timeval random;
         /*random number generator*/
@@ -711,8 +712,8 @@ void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
 
         if(strnlen(domain, DOMAIN_MAX_SIZE+1) > DOMAIN_MAX_SIZE){
         /*if the domain submitted is too long, then return an error*/
+                memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error = INVALID_DOMAIN;
-                dnsr->url[0] = '\000';
                 return;
         }
 
@@ -730,10 +731,8 @@ void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
         if(Ping::initializeSocket()){
         //initialize the socket
             error = INITIALIZATION_FAILURE;
-            //milliseconds = -1;
-            //DNS_Response dnsr;
+            memset(dnsr, 0, sizeof(DNS_Response));
             dnsr->dns_error = WSA_INITIALIZE_FAILURE;
-            dnsr->url[0] = '\0';
             return;
             //if failed to initialize the windows socket, then return -1
         }
@@ -779,8 +778,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
                 /*if the label size is greater than 63, then the domain is
                 *invalid
                 */
+                        memset(dnsr, 0, sizeof(DNS_Response));
                         dnsr->dns_error = INVALID_DOMAIN;
-                        dnsr->url[0] = '\000';
                         return;
                 }
 
@@ -862,8 +861,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 
         if(val<0){
             /*if sending failed, return an error*/
+                memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error = SEND_REQUEST_FAILURE;
-                dnsr->url[0]       = '\0';
                 return;
 
         }
@@ -895,9 +894,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 
                 if(val<0){
                         /*if failed to receive, return an error*/
+                        memset(dnsr, 0, sizeof(DNS_Response));
                         dnsr->dns_error = RECV_REQUEST_FAILURE;
-                        dnsr->url[0]       = '\0';
-                        dnsr->port      = 0;
                         return;
                 }
 
@@ -919,9 +917,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
                 /*if there were no answers, then return out to let
                 *the user know
                 */
-                dnsr->url[0]        = '\0';
+                memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error  = (DNS_ERROR)_error;
-                dnsr->port       = 0;
                 //_dnsr = &dnsr;
                 return;
         }

@@ -38,6 +38,7 @@
 
 
 #include "MinecraftPing.h"
+#include <new>
 
 extern "C" {
 /*These are all implementations of the C frontend of the library.
@@ -48,22 +49,22 @@ extern "C" {
 
         Ping* newPing(void)
         {
-                return new Ping();
+                return new(std::nothrow) Ping();
         }
 
         Ping* createPing(const char* address, uint16_t p)
         {
-                return new Ping(address, p);
+                return new(std::nothrow) Ping(address, p);
         }
 
         Ping* copyPing(const Ping *obj)
         {
-                return new Ping(*obj);
+                return new(std::nothrow) Ping(*obj);
         }
 
         void destroyPing(Ping* p)
         {
-                p->~Ping();
+                delete p;
         }
 
         int ping_connectMC(Ping* p)
@@ -86,7 +87,7 @@ extern "C" {
                 return p->getPing();
         }
 
-        void ping_SRV_Lookup(char* domain, DNS_Response* dnsr)
+        void ping_SRV_Lookup(const char* domain, DNS_Response* dnsr)
         {
                 Ping::SRV_Lookup(domain, dnsr);
         }
@@ -96,10 +97,10 @@ extern "C" {
                 return p->getDNSerror();
         }
 
-        void ping_ping_free(Ping* p)
+        /*void ping_ping_free(Ping* p)
         {
                 p->ping_free();
-        }
+        }*/
 
 
 

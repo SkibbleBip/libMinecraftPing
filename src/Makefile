@@ -3,7 +3,7 @@ SOURCE	= main.cpp, main_c.cpp,
 HEADER	= MinecraftPing.h
 OUT	= libMinecraftPing
 CC	= g++
-FLAGS	= -s -O3 -Wall -fno-exceptions
+FLAGS	= -s -O3 -Wall -fno-exceptions -fPIC
 LFLAGS	=
 OBJ	= obj
 STATIC  = build/static
@@ -29,7 +29,7 @@ shared: $(OBJS)
 ifeq ($(OS),Windows_NT)
 		$(CC) -fPIC $(SOURCE) -shared -o $(SHARED)/$(OUT).so -lwsock32 -liphlpapi
 else
-		$(CC) -shared -s $(OBJS) -o $(SHARED)/$(OUT).so
+		$(CC) -fPIC -shared -s $(OBJS) -o $(SHARED)/$(OUT).so
 endif
 
 dll: $(OBJS)

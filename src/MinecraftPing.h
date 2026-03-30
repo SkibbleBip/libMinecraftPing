@@ -172,7 +172,7 @@ public:
         pingError getError();
         char* getResponse();
         long getPing();
-        static void SRV_Lookup(char* domain, DNS_Response* dnsr);
+        static void SRV_Lookup(const char* domain, DNS_Response* dnsr);
         DNS_ERROR getDNSerror();
         void ping_free();
 
@@ -213,7 +213,7 @@ extern "C" {
 
         long ping_getPing(Ping* p);
 
-        void ping_SRV_Lookup(char* domain, struct DNS_Response* dnsr);
+        void ping_SRV_Lookup(const char* domain, struct DNS_Response* dnsr);
 
         enum DNS_ERROR ping_getDNSerror(Ping* p);
 
