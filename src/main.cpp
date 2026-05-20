@@ -63,9 +63,10 @@
 *                       minecraft server and query it's status
 *
 * Parameters:
-*        connectMC      O/P     int     return status, returns 1 if successful,
-*                                                0 if server is offline, or
-*                                                negative if an error occured
+*        connectMC      O/P     int     return status
+*   Note: returns >= 0 if successful. 0 means a proper handshake and reply received
+*   Any other positive value is a soft error, such as domain redirection or offline server
+*   Negative values means something internal errored out.
 **************************************************************************/
 int Ping::connectMC(void)
 {
@@ -77,6 +78,7 @@ int Ping::connectMC(void)
         error = OK;
 
         unsigned short _port = this->port;
+        DNS_Response dnsr;
 
         free(pingResponse);
 
@@ -88,8 +90,8 @@ int Ping::connectMC(void)
         //initialize the socket
                 error = INITIALIZATION_FAILURE;
                 milliseconds = -1;
-                return -1;
-                //if failed to initialize the windows socket, then return -1
+                return error;
+                //if failed to initialize the windows socket, then return
 
         }
 #endif // windows requires you to initialize the socket before opening
@@ -113,7 +115,7 @@ int Ping::connectMC(void)
         else{
                 struct hostent* _host;  //struct to contain the host info
 
-                DNS_Response dnsr;
+
                 SRV_Lookup((char*)frontAddress, &dnsr);
                 dnsError = dnsr.dns_error;
                 /*attempt SRV record lookup, set the error code from the
@@ -127,6 +129,8 @@ int Ping::connectMC(void)
                         *and get the _host object that contains the properties
                         *of the server domain
                         */
+                        error = REDIRECTED;
+                        /* Set error return to the redirected value */
 
                 }
                 else if(dnsError == NXDOMAIN_STATUS){
@@ -143,9 +147,9 @@ int Ping::connectMC(void)
                         free(pingResponse);
                         pingResponse = nullptr;
                         milliseconds = -1;
-                        return -1;
+                        return error;
                 /*the SRV record failed to successfully request a lookup,
-                *something went wrong set the error code and return -1 to let
+                *something went wrong set the error code and return to let
                 *user know there was a failure
                 */
 
@@ -164,13 +168,13 @@ int Ping::connectMC(void)
 
                 }
                 else{
-                        error        = OK;
+                        error        = NO_DOMAIN;
                         pingResponse = nullptr;
                         milliseconds = -1;
-                        return 0;
+                        return error;
                         /*if _host was nullptr, that's ok, it just means
                         *the DNS server could not find the domain, it does
-                        not exist. return 0 to let user know the server was
+                        not exist. return NO_DOMAIN to let user know the server was
                         *not found
                         */
                 }
@@ -210,7 +214,7 @@ int Ping::connectMC(void)
                 free(pingResponse);
                 pingResponse = nullptr;
 
-                return -1;
+                return error;
         }
         /*open the socket*/
 
@@ -241,7 +245,7 @@ int Ping::connectMC(void)
                 error = CONNECT_FAILURE;
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return 0;
+                return error;
 
         }
 
@@ -257,7 +261,7 @@ int Ping::connectMC(void)
                 dnsError = INVALID_DOMAIN;
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return 0;
+                return error;
         }
 
 
@@ -269,7 +273,7 @@ int Ping::connectMC(void)
                 error = SEND_FAILURE;
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return -1;
+                return error;
         }
         sendVal = send(sock, request, 2, 0);
         /*follow up immediatly with a request packet*/
@@ -278,7 +282,7 @@ int Ping::connectMC(void)
                 error = SEND_FAILURE;
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return -1;
+                return error;
         }
 
 
@@ -297,15 +301,16 @@ int Ping::connectMC(void)
                 error = RECEIVE_FAILURE;
                 pingResponse = nullptr;
                 milliseconds = -1;
-                return -1;
+                return error;
         }
         if(id != 0){
                 /*if the ID is not 0, then it is not a regular reply-could
                 * be a reject packet or trash
                 */
+                error = BAD_RESPONSE;
                 milliseconds = -1;
                 pingResponse = nullptr;
-                return 0;
+                return error;
         }
 
 
@@ -313,10 +318,13 @@ int Ping::connectMC(void)
         if(json_length < 0){
                 milliseconds = -1;
                 pingResponse = nullptr;
-                return -1;
+                return error;
+                /* Past-me decided it was a good idea for readVarInt() to set the error value.
+                 * That is clearly not the case now
+                 */
         }
         /*if the response from readVarInt() is negative, then it failed to
-        *read, return -1
+        *read, return
         */
 
 
@@ -342,7 +350,7 @@ int Ping::connectMC(void)
                         free(pingResponse);
                         pingResponse = nullptr;
                         milliseconds = -1;
-                        return -1;
+                        return error;
                 }
 
 
@@ -398,7 +406,7 @@ int Ping::connectMC(void)
                 int total = 0;
                 read = 0;
                 do{
-                        read = recv(sock, pingReply+read, 10, 0);
+                        read = recv(sock, pingReply+read, 10 - total, 0);
                         total +=read;
 
                 }while(total <10);
@@ -419,8 +427,8 @@ int Ping::connectMC(void)
                         /*if the ping ID and size dont match, throw error.
                         *this is a soft error
                         */
-                        error = PING_FAILURE;
-                        milliseconds = -1;
+                            error = PING_FAILURE;
+                            milliseconds = -1;
                         }
                         else{
 
@@ -449,6 +457,7 @@ int Ping::connectMC(void)
                         }
                 }
         }
+        // @todo this is ugly as sin, clean it up
 
 
        CLOSE(sock);
@@ -458,8 +467,8 @@ int Ping::connectMC(void)
        /*cleanup any windows related stuff*/
 
 
-        return 1;
-    /*return 1, we successfully connected*/
+        return error;
+    /*return what we ended up on, hopefully we were successful*/
 }
 
 /***************************************************************************
