@@ -217,10 +217,6 @@ int Ping::connectMC(void)
         }
         /*open the socket*/
 
-
-
-
-
 #ifdef _WIN32
         unsigned long mode = 0;
         /* 0 is blocking, != is non-blocking  */
@@ -919,7 +915,6 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
                 */
                 memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error  = (DNS_ERROR)_error;
-                //_dnsr = &dnsr;
                 return;
         }
 
