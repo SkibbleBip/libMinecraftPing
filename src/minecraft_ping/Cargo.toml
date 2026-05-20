@@ -1,0 +1,16 @@
+[package]
+name = "minecraft_ping"
+version = "1.3.1"
+edition = "2021"
+build = "build.rs"
+
+
+[dependencies]
+num-traits = "0.2"
+num-derive = "0.3"
+
+[features]
+static = []
+dynamic = []
+
+default = ["dynamic"]

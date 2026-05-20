@@ -165,14 +165,14 @@ private:
 
 public:
         int connectMC();
-        Ping( const char* address, unsigned short p);
+        Ping( const char* address, uint16_t port);
         Ping();
         ~Ping();
         Ping(const Ping &obj);
         pingError getError();
         char* getResponse();
         long getPing();
-        static void SRV_Lookup(char* domain, DNS_Response* dnsr);
+        static void SRV_Lookup(const char* domain, DNS_Response* dnsr);
         DNS_ERROR getDNSerror();
         void ping_free();
 
@@ -199,9 +199,9 @@ extern "C" {
 
         Ping* newPing(void);
 
-        Ping* createPing(const char* address, int p);
+        Ping* createPing(const char* address, uint16_t p);
 
-        Ping* copyPing(const Ping obj);
+        Ping* copyPing(const Ping *obj);
 
         void destroyPing(Ping* p);
 
@@ -213,7 +213,7 @@ extern "C" {
 
         long ping_getPing(Ping* p);
 
-        void ping_SRV_Lookup(char* domain, struct DNS_Response* dnsr);
+        void ping_SRV_Lookup(const char* domain, struct DNS_Response* dnsr);
 
         enum DNS_ERROR ping_getDNSerror(Ping* p);
 

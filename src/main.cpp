@@ -81,6 +81,7 @@ int Ping::connectMC(void)
         DNS_Response dnsr;
 
         free(pingResponse);
+        pingResponse = nullptr;
 
 
 
@@ -114,8 +115,6 @@ int Ping::connectMC(void)
         }
         else{
                 struct hostent* _host;  //struct to contain the host info
-
-
                 SRV_Lookup((char*)frontAddress, &dnsr);
                 dnsError = dnsr.dns_error;
                 /*attempt SRV record lookup, set the error code from the
@@ -190,7 +189,7 @@ int Ping::connectMC(void)
         * checks if the inputted Minecraft server location is an IP or URL.
         * This assumes you are aware whether or not the destination accepts IPs
         * or URLs. Attempting to connect from an invalid URL will result
-        * in a DNS_FAILURE error and a return 0.
+        * in a DNS_FAILURE error and a return error.
         */
 
 
@@ -217,10 +216,6 @@ int Ping::connectMC(void)
                 return error;
         }
         /*open the socket*/
-
-
-
-
 
 #ifdef _WIN32
         unsigned long mode = 0;
@@ -479,9 +474,9 @@ int Ping::connectMC(void)
 *
 * Parameters:
 *        address        I/P     const char*     domain of the minecraft server
-*        p              I/P     unsigned short  port of the minecraft server
+*        p              I/P     uint16_t        port of the minecraft server
 **************************************************************************/
-Ping::Ping( const char* address, unsigned short p)
+Ping::Ping( const char* address, uint16_t p)
 {
         port = p;
         strncpy(frontAddress, address, DOMAIN_MAX_SIZE);
@@ -489,7 +484,7 @@ Ping::Ping( const char* address, unsigned short p)
 
         timeout.tv_sec = 5;
         timeout.tv_usec = 0;
-        //pingResponse = (char*)malloc(0);
+        pingResponse = nullptr;
         error = OK;
         dnsError = NOERROR_STATUS;
         milliseconds = 0;
@@ -703,7 +698,7 @@ bool Ping::checkIfIP(const char* in)
 *        dnsr   I/O     DNS_Response*   DNS data response struct that holds
 *                                               any error codes, responses, etc
 **************************************************************************/
-void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
+void Ping::SRV_Lookup(const char* domain, DNS_Response* dnsr)
 {
         struct timeval random;
         /*random number generator*/
@@ -713,8 +708,8 @@ void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
 
         if(strnlen(domain, DOMAIN_MAX_SIZE+1) > DOMAIN_MAX_SIZE){
         /*if the domain submitted is too long, then return an error*/
+                memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error = INVALID_DOMAIN;
-                dnsr->url[0] = '\000';
                 return;
         }
 
@@ -732,10 +727,8 @@ void Ping::SRV_Lookup(char* domain, DNS_Response* dnsr)
         if(Ping::initializeSocket()){
         //initialize the socket
             error = INITIALIZATION_FAILURE;
-            //milliseconds = -1;
-            //DNS_Response dnsr;
+            memset(dnsr, 0, sizeof(DNS_Response));
             dnsr->dns_error = WSA_INITIALIZE_FAILURE;
-            dnsr->url[0] = '\0';
             return;
             //if failed to initialize the windows socket, then return -1
         }
@@ -781,8 +774,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
                 /*if the label size is greater than 63, then the domain is
                 *invalid
                 */
+                        memset(dnsr, 0, sizeof(DNS_Response));
                         dnsr->dns_error = INVALID_DOMAIN;
-                        dnsr->url[0] = '\000';
                         return;
                 }
 
@@ -864,8 +857,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 
         if(val<0){
             /*if sending failed, return an error*/
+                memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error = SEND_REQUEST_FAILURE;
-                dnsr->url[0]       = '\0';
                 return;
 
         }
@@ -897,9 +890,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 
                 if(val<0){
                         /*if failed to receive, return an error*/
+                        memset(dnsr, 0, sizeof(DNS_Response));
                         dnsr->dns_error = RECV_REQUEST_FAILURE;
-                        dnsr->url[0]       = '\0';
-                        dnsr->port      = 0;
                         return;
                 }
 
@@ -921,10 +913,8 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
                 /*if there were no answers, then return out to let
                 *the user know
                 */
-                dnsr->url[0]        = '\0';
+                memset(dnsr, 0, sizeof(DNS_Response));
                 dnsr->dns_error  = (DNS_ERROR)_error;
-                dnsr->port       = 0;
-                //_dnsr = &dnsr;
                 return;
         }
 

@@ -39,37 +39,46 @@ int main(int argc, char* args[])
 
 
 	Ping* ping = createPing(ip, port);
+	Ping* pingCopy = copyPing(ping);
 
-	int q = ping_connectMC(ping);
+	Ping* arr[] = {ping, pingCopy};
 
-	if(q < 0){
-		printf("There was an error attempting to communicate with the Minecraft server: %d \n",
-			ping_getError(ping)
-			);
-		printf("\tDNS Error Response: %s \n", getDNSresponse(ping_getDNSerror(ping)));
-		printf("\tMinecraft Error Code: %s\n", getAPIerror(ping_getError(ping)));
-		return -1;
-	}
+	for(int idx = 0; idx < 2; idx++){
+	Ping* tmp = arr[idx];
 
-	else if(q == 0){
-		printf("The server was not found: \n");
-		struct DNS_Response d;
-		ping_SRV_Lookup(ip, &d);
-		printf("\tBackend resolved address: %s\n", d.url);
-		printf("\tDNS Error Response: %s\n", getDNSresponse(ping_getDNSerror(ping)));
-		printf("\tMinecraft Error Code: %s\n", getAPIerror(ping_getError(ping)));
-		return 0;
-	}
+        int q = ping_connectMC(tmp);
 
-	printf("%s\n", ping_getResponse(ping));
-	printf("\n\n\tPing: %ld ms\n", ping_getPing(ping));
-	struct DNS_Response d;
+        if(q < 0){
+            printf("There was an error attempting to communicate with the Minecraft server: %d \n",
+                ping_getError(tmp)
+                );
+            printf("\tDNS Error Response: %s \n", getDNSresponse(ping_getDNSerror(tmp)));
+            printf("\tMinecraft Error Code: %s\n", getAPIerror(ping_getError(tmp)));
+            return -1;
+        }
+
+        else if(q == 0){
+            printf("The server was not found: \n");
+            struct DNS_Response d;
+            ping_SRV_Lookup(ip, &d);
+            printf("\tBackend resolved address: %s\n", d.url);
+            printf("\tDNS Error Response: %s\n", getDNSresponse(ping_getDNSerror(tmp)));
+            printf("\tMinecraft Error Code: %s\n", getAPIerror(ping_getError(tmp)));
+            return 1;
+        }
+
+        printf("%s\n", ping_getResponse(tmp));
+        printf("\n\n\tPing: %ld ms\n", ping_getPing(tmp));
+        struct DNS_Response d;
         ping_SRV_Lookup(ip, &d);
-	printf("\tBackend resolved address: %s\n", d.url);
-        printf("\tDNS Error Response: %s\n", getDNSresponse(ping_getDNSerror(ping)));
-        printf("\tMinecraft Error Code: %s\n", getAPIerror(ping_getError(ping)));
+        printf("\tBackend resolved address: %s\n", d.url);
+        printf("\tDNS Error Response: %s\n", getDNSresponse(ping_getDNSerror(tmp)));
+        printf("\tMinecraft Error Code: %s\n", getAPIerror(ping_getError(tmp)));
+        printf("\n\n\n");
 
-	return 1;
+    }
+
+	return 0;
 }
 
 
