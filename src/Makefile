@@ -18,14 +18,21 @@ ifeq ($(OS),Windows_NT)
 		dll
 endif
 
+ifeq ($(OS),Windows_NT)
+    MKDIR = if not exist "$(1)" mkdir "$(1)"
+    RM = rmdir /s /q
+else
+    MKDIR = mkdir -p $(1)
+    RM = rm -rf
+endif
 
 
 static: $(OBJS)
-	mkdir -p $(STATIC)
+	$(call MKDIR,$(STATIC))
 	ar rcs $(STATIC)/$(OUT).a $(OBJS)
 
 shared: $(OBJS)
-	mkdir -p $(SHARED)
+	$(call MKDIR,$(SHARED))
 ifeq ($(OS),Windows_NT)
 		$(CC) -fPIC $(SOURCE) -shared -o $(SHARED)/$(OUT).so -lwsock32 -liphlpapi
 else
@@ -33,7 +40,7 @@ else
 endif
 
 dll: $(OBJS)
-	mkdir -p $(DLL)
+	$(call MKDIR,$(DLL))
 	$(CC) -shared -Wl, --out-implib=$(DLL)/$(OUT).a -Wl,--dll $(OBJS) -o $(OUT) -s -lwsock32 -liphlpapi
 
 
@@ -41,14 +48,16 @@ dll: $(OBJS)
 libMinecraftPing: $(OBJS)
 	$(CC) -s $(OBJS) -o $(OUT)
 obj/main.o: main.cpp
-	mkdir -p $(OBJ)
+	$(call MKDIR,$(OBJ))
 	$(CC) $(FLAGS) -c main.cpp -o $(OBJ)/main.o
 
 obj/main_c.o: main_c.cpp
-	mkdir -p $(OBJ)
+	$(call MKDIR,$(OBJ))
 	$(CC) $(FLAGS) -c main_c.cpp -o $(OBJ)/main_c.o
 
 
 clean:
-	rm -r -f $(OBJ) $(OUT) $(STATIC) $(SHARED) $(DLL)
-
+	-$(RM) $(OBJ)
+	-$(RM) $(STATIC)
+	-$(RM) $(SHARED)
+	-$(RM) $(DLL)
