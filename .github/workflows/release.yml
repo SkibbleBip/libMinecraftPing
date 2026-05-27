@@ -60,13 +60,20 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup MinGW
-        uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
+        shell: powershell
+        run: |
+          choco install mingw -y
+          echo "C:\ProgramData\mingw64\mingw64\bin" >> $env:GITHUB_PATH
+
+      - name: Verify compiler
+        shell: powershell
+        run: |
+          g++ --version
+          make --version
 
       - name: Build
         working-directory: ./src
-        run: mingw32-make
+        run: make
 
       - name: Prepare release package
         shell: bash
