@@ -73,6 +73,7 @@ jobs:
 
       - name: Build
         working-directory: ./src
+        shell: powershell
         run: make
 
       - name: Prepare release package
