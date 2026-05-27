@@ -1,0 +1,67 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+
+jobs:
+
+  linux:
+    name: Linux Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential
+
+      - name: Clean
+        working-directory: ./src
+        run: make clean
+
+      - name: Build
+        working-directory: ./src
+        run: make
+
+      - name: Verify static library
+        run: test -f src/build/static/libMinecraftPing.a
+
+      - name: Verify shared library
+        run: test -f src/build/shared/libMinecraftPing.so
+
+  windows:
+    name: Windows Build
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MinGW
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+
+      - name: Clean
+        working-directory: ./src
+        run: mingw32-make clean
+
+      - name: Build
+        working-directory: ./src
+        run: mingw32-make
+
+      - name: Verify static library
+        shell: bash
+        run: test -f src/build/static/libMinecraftPing.a
+
+      - name: Verify DLL import library
+        shell: bash
+        run: test -f src/build/dll/libMinecraftPing.a

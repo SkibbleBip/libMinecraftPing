@@ -1,0 +1,127 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+
+  linux:
+    name: Linux Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential zip
+
+      - name: Build
+        working-directory: ./src
+        run: make
+
+      - name: Prepare release package
+        run: |
+          mkdir -p package/libMinecraftPing/include
+          mkdir -p package/libMinecraftPing/lib
+
+          cp src/MinecraftPing.h package/libMinecraftPing/include/
+
+          cp src/build/static/libMinecraftPing.a \
+             package/libMinecraftPing/lib/
+
+          cp src/build/shared/libMinecraftPing.so \
+             package/libMinecraftPing/lib/
+
+      - name: Create ZIP archive
+        run: |
+          cd package
+          zip -r ../libMinecraftPing-linux.zip libMinecraftPing
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: libMinecraftPing-linux.zip
+
+  windows:
+    name: Windows Build
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MinGW
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+
+      - name: Build
+        working-directory: ./src
+        run: mingw32-make
+
+      - name: Prepare release package
+        shell: bash
+        run: |
+          mkdir -p package/libMinecraftPing/include
+          mkdir -p package/libMinecraftPing/lib
+
+          cp src/MinecraftPing.h package/libMinecraftPing/include/
+
+          cp src/build/static/libMinecraftPing.a \
+             package/libMinecraftPing/lib/
+
+          cp src/build/shared/libMinecraftPing.so \
+             package/libMinecraftPing/lib/ || true
+
+          cp src/build/dll/libMinecraftPing.a \
+             package/libMinecraftPing/lib/ || true
+
+          find . -name "*.dll" -exec cp {} package/libMinecraftPing/lib/ \;
+
+      - name: Create ZIP archive
+        shell: powershell
+        run: |
+          Compress-Archive `
+            -Path package/libMinecraftPing `
+            -DestinationPath libMinecraftPing-windows.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: libMinecraftPing-windows.zip
+
+  release:
+    name: Create GitHub Release
+    needs:
+      - linux
+      - windows
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            libMinecraftPing-linux.zip
+            libMinecraftPing-windows.zip
