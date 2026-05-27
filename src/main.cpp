@@ -50,7 +50,36 @@
 
 
 #include "MinecraftPing.h"
+#ifndef _WIN32
 #include <endian.h>
+#define SEND_CAST
+#define RECV_CAST
+#else
+#include <stdlib.h>
+#define htobe16(x) _byteswap_ushort(x)
+#define htole32(x) (x)
+#define SEND_CAST (const char*)
+#define RECV_CAST (char*)
+
+
+class WinsockInit {
+    public:
+        bool init_status = false;
+        WinsockInit() : init_status(initializeSocket()){ }
+        ~WinsockInit() {
+            WSACleanup();
+        }
+     private:
+        bool initializeSocket(void);
+};
+
+// Global instance - constructor runs before main, destructor after
+static WinsockInit winsockInit;
+// hidden static object used for init'ing the sockets in windows
+#endif
+
+
+
 
 
 
@@ -87,7 +116,7 @@ int Ping::connectMC(void)
 
 
 #ifdef _WIN32
-        if(Ping::initializeSocket()){
+        if(winsockInit.init_status){
         //initialize the socket
                 error = INITIALIZATION_FAILURE;
                 milliseconds = -1;
@@ -222,8 +251,11 @@ int Ping::connectMC(void)
         /* 0 is blocking, != is non-blocking  */
         ioctlsocket(sock, FIONBIO, &mode);
         /*in *nix, sockets are blocking by default*/
-#endif // _WIN32
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+ 	DWORD timeout_ms = timeout.tv_sec * 1000 + timeout.tv_usec / 1000;
+	setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, SEND_CAST  (const char*)&timeout_ms, sizeof(timeout_ms));
+#else  // _WIN32
+	setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, SEND_CAST  &timeout, sizeof(timeout));
+#endif 
         /*set socket options as blocking, set the timeout for the connection*/
 
 
@@ -260,7 +292,7 @@ int Ping::connectMC(void)
         }
 
 
-        int sendVal = send(sock, handshakePacket, packetSize, 0);
+        int sendVal = send(sock, SEND_CAST handshakePacket, packetSize, 0);
         /*send the handshake packet*/
 
         if(sendVal <0){
@@ -270,7 +302,7 @@ int Ping::connectMC(void)
                 milliseconds = -1;
                 return error;
         }
-        sendVal = send(sock, request, 2, 0);
+        sendVal = send(sock, SEND_CAST request, 2, 0);
         /*follow up immediatly with a request packet*/
         if(sendVal <0){
         /*if response negative, then it failed*/
@@ -287,7 +319,7 @@ int Ping::connectMC(void)
         /*eat the first varInt, this variable isnt needed for anything*/
 
         char id;
-        int size = recv(sock, &id, 1, 0);
+        int size = recv(sock, RECV_CAST &id, 1, 0);
         /*attempt to get the ID of the transmission.
         * Minecraft's packet ID is 0x0
         */
@@ -389,7 +421,7 @@ int Ping::connectMC(void)
 *receiving the ping-pong packets
 */
 
-        sendVal = send(sock, pingPacket, 10, 0);
+        sendVal = send(sock, SEND_CAST pingPacket, 10, 0);
         /*send the packet*/
         if(sendVal < 0){
                 error = SEND_FAILURE;
@@ -401,7 +433,7 @@ int Ping::connectMC(void)
                 int total = 0;
                 read = 0;
                 do{
-                        read = recv(sock, pingReply+read, 10 - total, 0);
+                        read = recv(sock, RECV_CAST &pingReply[read], 10 - total, 0);
                         total +=read;
 
                 }while(total <10);
@@ -456,9 +488,6 @@ int Ping::connectMC(void)
 
 
        CLOSE(sock);
-#ifdef _WIN32
-       WSACleanup();
-#endif // _WIN32
        /*cleanup any windows related stuff*/
 
 
@@ -535,7 +564,7 @@ Ping::Ping()
 
 #ifdef _WIN32
 /***************************************************************************
-* bool Ping::initializeSocket(void)
+* bool WinsockInit::initializeSocket(void)
 * Author: SkibbleBip
 * Date: Unknown, 2020
 * Description: (Windows Only) Initializes the WSA socket OS features
@@ -543,7 +572,7 @@ Ping::Ping()
 * Parameters:
 *        initializeSocket       O/P     bool    boolean status return value
 **************************************************************************/
-bool Ping::initializeSocket(void)
+bool WinsockInit::initializeSocket(void)
 {
         /*windows network initializer*/
         WSADATA data;
@@ -724,9 +753,9 @@ void Ping::SRV_Lookup(const char* domain, DNS_Response* dnsr)
 
 
 #ifdef _WIN32
-        if(Ping::initializeSocket()){
+        if(winsockInit.init_status){
         //initialize the socket
-            error = INITIALIZATION_FAILURE;
+            // error = INITIALIZATION_FAILURE;
             memset(dnsr, 0, sizeof(DNS_Response));
             dnsr->dns_error = WSA_INITIALIZE_FAILURE;
             return;
@@ -846,7 +875,7 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 
 
         int val = sendto(s,
-                        toSend,
+                        RECV_CAST toSend,
                         sizeof(mcHeader)+z+1,
                         0,
                         (sockaddr*)&dest,
@@ -881,7 +910,7 @@ ADDITIONAL RESOURCE COUNTS: 16 bits
 
         do
         {
-                val = recvfrom(s, incoming, 512, 0, (sockaddr*)&dest, &x);
+                val = recvfrom(s, RECV_CAST incoming, 512, 0, (sockaddr*)&dest, &x);
     /**         DNS Answer
         NAME (QNAME FORMAT) | TYPE: 16 bits | CLASS: 16 bits | TTL: 32 bits |
         RDLENGTH: 16 bits

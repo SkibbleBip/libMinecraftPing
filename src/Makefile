@@ -1,5 +1,5 @@
 OBJS	= obj/main.o obj/main_c.o
-SOURCE	= main.cpp, main_c.cpp,
+SOURCE	= main.cpp main_c.cpp
 HEADER	= MinecraftPing.h
 OUT	= libMinecraftPing
 CC	= g++
@@ -12,15 +12,17 @@ DLL	= build/dll
 
 
 
-all: static shared
-	#$(CC) -s -c $(OBJS) -o $(OUT) $(LFLAGS)
 ifeq ($(OS),Windows_NT)
-		dll
+ALL_TARGETS = static shared dll
+else
+ALL_TARGETS = static shared
 endif
+
+all: $(ALL_TARGETS)
 
 ifeq ($(OS),Windows_NT)
     MKDIR = if not exist "$(1)" mkdir "$(1)"
-    RM = rmdir /s /q
+    RM = powershell -NoProfile -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
 else
     MKDIR = mkdir -p $(1)
     RM = rm -rf
@@ -41,7 +43,7 @@ endif
 
 dll: $(OBJS)
 	$(call MKDIR,$(DLL))
-	$(CC) -shared -Wl, --out-implib=$(DLL)/$(OUT).a -Wl,--dll $(OBJS) -o $(OUT) -s -lwsock32 -liphlpapi
+	$(CC) -shared -Wl,--out-implib=$(DLL)/$(OUT).a -Wl,--dll $(OBJS) -o $(DLL)/$(OUT).dll -s -lwsock32 -liphlpapi
 
 
 

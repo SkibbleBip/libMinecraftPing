@@ -157,7 +157,6 @@ private:
         DNS_ERROR dnsError;
         //variables
 
-        bool initializeSocket(void);
         size_t buildHandshake(uint8_t* buffer, char* host);
         int readVarInt(int s);
         bool checkIfIP(const char* in);
