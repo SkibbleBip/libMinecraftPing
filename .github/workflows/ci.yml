@@ -50,12 +50,14 @@ jobs:
           echo "C:\ProgramData\mingw64\mingw64\bin" >> $env:GITHUB_PATH
 
       - name: Clean
+        shell: powershell
         working-directory: ./src
         run: make clean
 
       - name: Build
+        shell: powershell
         working-directory: ./src
-        run: make
+        run: make SHELL=cmd.exe
 
       - name: Verify static library
         shell: bash

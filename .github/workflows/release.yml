@@ -73,7 +73,8 @@ jobs:
 
       - name: Build
         working-directory: ./src
-        run: make
+        shell: powershell
+        run: make SHELL=cmd.exe
 
       - name: Prepare release package
         shell: bash
